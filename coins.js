@@ -32,6 +32,11 @@ function addCoins(amount) {
   if (!users[key]) return;
   users[key].coins = (users[key].coins || 0) + amount;
   saveUsers(users);
+  // Supabase ga ham saqlash
+  try {
+    const sb = getSB();
+    if (sb) sb.from('users').update({ coins: users[key].coins }).eq('id', key);
+  } catch(e) {}
   refreshCoinDisplay();
 }
 
@@ -44,6 +49,14 @@ function addResult(win) {
   if (win) { users[key].wins = (users[key].wins||0)+1; }
   else      { users[key].losses = (users[key].losses||0)+1; }
   saveUsers(users);
+  // Supabase ga ham saqlash
+  try {
+    const sb = getSB();
+    if (sb) sb.from('users').update({
+      wins: users[key].wins,
+      losses: users[key].losses
+    }).eq('id', key);
+  } catch(e) {}
 }
 
 // Refresh coin display in navbar
