@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GameZone - Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css"/>
+  <!-- Ably SDK -->
+  <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-logo">рџЋ® <span>GameZone</span></div>
+  <div class="nav-center">
+    <div class="coin-display">
+      <span class="coin-icon">рџЄ™</span>
+      <span id="nav-coins">0</span>
+    </div>
+  </div>
+  <div class="nav-right">
+    <div class="profile-btn" onclick="toggleProfile()">
+      <div class="avatar" id="nav-avatar">?</div>
+      <span id="nav-username">...</span>
+      <span>в–ѕ</span>
+    </div>
+  </div>
+</nav>
+
+<!-- PROFILE DROPDOWN -->
+<div class="profile-dropdown" id="profile-dropdown">
+  <div class="dropdown-header">
+    <div class="big-avatar" id="drop-avatar">?</div>
+    <div>
+      <div class="drop-username" id="drop-username">...</div>
+      <div class="drop-stats">
+        <span>рџЏ† <span id="drop-wins">0</span></span>
+        <span>рџ’Ђ <span id="drop-losses">0</span></span>
+      </div>
+    </div>
+  </div>
+  <hr class="drop-divider"/>
+  <button class="drop-btn" onclick="openShop()">рџ›ЌпёЏ Ko'rinish Do'koni</button>
+  <button class="drop-btn" onclick="logout()">рџљЄ Chiqish</button>
+</div>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+
+  <!-- Hero Section -->
+  <div class="hero">
+    <h1 class="hero-title">Salom, <span id="hero-username">O'yinchi</span>! рџ‘‹</h1>
+    <p class="hero-sub">Do'stingni chaqir yoki yangi raqib top. O'yna va tanga yig'!</p>
+  </div>
+
+  <!-- Games Grid -->
+  <div class="section-title">рџЋ® Multiplayer O'yinlar</div>
+  <div class="games-grid">
+
+    <div class="game-card" onclick="openGameModal('tictactoe')">
+      <div class="game-emoji">в­•</div>
+      <div class="game-info">
+        <div class="game-name">Tic-Tac-Toe</div>
+        <div class="game-desc">3x3 klassik o'yin. Birinchi 3 tani tizing!</div>
+      </div>
+      <div class="game-reward">+рџЄ™ 50</div>
+    </div>
+
+    <div class="game-card" onclick="openGameModal('connect4')">
+      <div class="game-emoji">рџ”ґ</div>
+      <div class="game-info">
+        <div class="game-name">Connect Four</div>
+        <div class="game-desc">4 tani qatorga joylashtiring. Strategik o'yin!</div>
+      </div>
+      <div class="game-reward">+рџЄ™ 75</div>
+    </div>
+
+    <div class="game-card" onclick="openGameModal('quiz')">
+      <div class="game-emoji">рџ§ </div>
+      <div class="game-info">
+        <div class="game-name">Quiz Battle</div>
+        <div class="game-desc">Savol-javob bellashuvi. Bilim kuchini sinang!</div>
+      </div>
+      <div class="game-reward">+рџЄ™ 60</div>
+    </div>
+
+  </div>
+
+  <!-- Solo Games -->
+  <div class="section-title">рџ•№пёЏ Yakkama-yakka O'yinlar</div>
+  <div class="games-grid">
+
+    <div class="game-card solo-card" onclick="window.location.href='wordle.html'">
+      <div class="game-emoji">рџџ©</div>
+      <div class="game-info">
+        <div class="game-name">Wordle</div>
+        <div class="game-desc">5 harfli so'zni 6 urinishda toping!</div>
+      </div>
+      <div class="game-reward">+рџЄ™ 100</div>
+    </div>
+
+    <div class="game-card solo-card" onclick="window.location.href='snake.html'">
+      <div class="game-emoji">рџђЌ</div>
+      <div class="game-info">
+        <div class="game-name">Snake</div>
+        <div class="game-desc">Ilonni boshqar, ovqat ye, ulayib ket!</div>
+      </div>
+      <div class="game-reward">+рџЄ™ 20</div>
+    </div>
+
+    <div class="game-card solo-card" onclick="window.location.href='memory.html'">
+      <div class="game-emoji">рџѓЏ</div>
+      <div class="game-info">
+        <div class="game-name">Memory Karta</div>
+        <div class="game-desc">Juft kartalarni toping. Xotirangizni sinang!</div>
+      </div>
+      <div class="game-reward">+рџЄ™ 80</div>
+    </div>
+
+    <div class="game-card solo-card" onclick="window.location.href='pong.html'">
+      <div class="game-emoji">рџЏ“</div>
+      <div class="game-info">
+        <div class="game-name">Pong</div>
+        <div class="game-desc">To'pni o'tkazma! CPU yoki do'stga qarshi.</div>
+      </div>
+      <div class="game-reward">+рџЄ™ 75</div>
+    </div>
+
+    <div class="game-card solo-card" onclick="window.location.href='minesweeper.html'">
+      <div class="game-emoji">рџ’Ј</div>
+      <div class="game-info">
+        <div class="game-name">Minalar</div>
+        <div class="game-desc">Minalarni chetlab o'ting. Ehtiyot bo'ling!</div>
+      </div>
+      <div class="game-reward">+рџЄ™ 90</div>
+    </div>
+
+    <div class="game-card solo-card" onclick="window.location.href='rps.html'">
+      <div class="game-emoji">вњЉ</div>
+      <div class="game-info">
+        <div class="game-name">Tosh Qaychi Qog'oz</div>
+        <div class="game-desc">5 raundlik duel. CPU ni yenginga urining!</div>
+      </div>
+      <div class="game-reward">+рџЄ™ 60</div>
+    </div>
+
+    <div class="game-card solo-card" onclick="window.location.href='math_duel.html'">
+      <div class="game-emoji">рџ§®</div>
+      <div class="game-info">
+        <div class="game-name">Math Duel</div>
+        <div class="game-desc">Tezkor matematika! CPU dan tezroq javob bering.</div>
+      </div>
+      <div class="game-reward">+рџЄ™ 80</div>
+    </div>
+
+    <div class="game-card solo-card" onclick="window.location.href='typing_race.html'">
+      <div class="game-emoji">вЊЁпёЏ</div>
+      <div class="game-info">
+        <div class="game-name">Typing Race</div>
+        <div class="game-desc">Kim tezroq yozadi? WPM rekordi qo'ying!</div>
+      </div>
+      <div class="game-reward">+рџЄ™ 50</div>
+    </div>
+
+  </div>
+
+  <!-- Leaderboard -->
+  <div class="section-title">рџЏ† Reyting</div>
+  <div class="leaderboard" id="leaderboard"></div>
+
+</main>
+
+<!-- GAME MODAL -->
+<div class="modal-overlay" id="game-modal" onclick="closeModal(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeGameModal()">вњ•</button>
+    <div class="modal-game-icon" id="modal-icon"></div>
+    <h2 class="modal-title" id="modal-title"></h2>
+    <p class="modal-desc" id="modal-desc"></p>
+
+    <div class="modal-options">
+      <div class="option-card" onclick="startGame('random')">
+        <div class="option-icon">рџЋІ</div>
+        <div class="option-title">Tasodifiy Raqib</div>
+        <div class="option-desc">Tizim siz uchun raqib topadi</div>
+      </div>
+      <div class="option-card" onclick="startGame('room')">
+        <div class="option-icon">рџ”ў</div>
+        <div class="option-title">Xona Raqami</div>
+        <div class="option-desc">Bir xil raqam kiritgan bilan o'ynang</div>
+      </div>
+      <div class="option-card" onclick="startGame('friend')">
+        <div class="option-icon">рџ‘Ґ</div>
+        <div class="option-title">Do'stni Chaqir</div>
+        <div class="option-desc">Username orqali do'stingni chaqiring</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ROOM MODAL -->
+<div class="modal-overlay" id="room-modal" onclick="closeModal(event)">
+  <div class="modal-box small">
+    <button class="modal-close" onclick="closeRoomModal()">вњ•</button>
+    <div class="modal-game-icon">рџ”ў</div>
+    <h2 class="modal-title">Xona Raqami</h2>
+    <p class="modal-desc">Har ikki o'yinchi bir xil raqam kiriting</p>
+    <input type="number" id="room-input" class="room-input" placeholder="Masalan: 1234" min="1000" max="9999"/>
+    <button class="big-btn" onclick="joinRoomAction()">Xonaga Kirish рџљЄ</button>
+    <div id="room-status" class="room-status"></div>
+  </div>
+</div>
+
+<!-- FRIEND MODAL -->
+<div class="modal-overlay" id="friend-modal" onclick="closeModal(event)">
+  <div class="modal-box small">
+    <button class="modal-close" onclick="closeFriendModal()">вњ•</button>
+    <div class="modal-game-icon">рџ‘Ґ</div>
+    <h2 class="modal-title">Do'stni Chaqir</h2>
+    <p class="modal-desc">Do'stingizning username'ini kiriting</p>
+    <input type="text" id="friend-input" class="room-input" placeholder="Username..."/>
+    <button class="big-btn green-btn" onclick="inviteFriend()">Chaqirish рџ“Ё</button>
+    <div id="friend-status" class="room-status"></div>
+  </div>
+</div>
+
+<!-- SHOP MODAL -->
+<div class="modal-overlay" id="shop-modal" onclick="closeModal(event)">
+  <div class="modal-box wide">
+    <button class="modal-close" onclick="closeShop()">вњ•</button>
+    <h2 class="modal-title">рџ›ЌпёЏ Ko'rinish Do'koni</h2>
+    <div class="coin-balance">Hisobingiz: рџЄ™ <span id="shop-coins">0</span></div>
+    <div class="shop-section-title">рџЋЁ Rang Skinlari</div>
+    <div class="skins-grid" id="skins-grid"></div>
+  </div>
+</div>
+
+<!-- WAITING MODAL -->
+<div class="modal-overlay" id="waiting-modal">
+  <div class="modal-box small">
+    <div class="spinner"></div>
+    <h2 class="modal-title" id="waiting-title">Raqib kutilmoqda...</h2>
+    <p class="modal-desc" id="waiting-desc">Iltimos kuting, tizim raqib qidiryapti</p>
+    <button class="big-btn red-btn" onclick="cancelWaiting()">Bekor Qilish вњ•</button>
+  </div>
+</div>
+
+<script src="coins.js"></script>
+<script src="game.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>
+

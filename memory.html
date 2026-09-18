@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GameZone - Memory</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:#0a0a1a;color:#fff;font-family:'Rajdhani',sans-serif;min-height:100vh;display:flex;flex-direction:column;}
+    .navbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:rgba(10,10,26,.9);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.08);}
+    .nav-logo{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;background:linear-gradient(135deg,#8b5cf6,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .back-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;padding:8px 16px;border-radius:10px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;}
+    .coin-display{display:flex;align-items:center;gap:6px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.3);border-radius:20px;padding:6px 14px;font-size:15px;font-weight:700;color:#fbbf24;}
+    .game-wrap{flex:1;display:flex;flex-direction:column;align-items:center;padding:20px 16px;}
+    .game-title{font-family:'Orbitron',sans-serif;font-size:24px;font-weight:900;background:linear-gradient(135deg,#8b5cf6,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px;}
+    .stats-bar{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;justify-content:center;}
+    .stat{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:8px 18px;text-align:center;}
+    .stat-label{font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;}
+    .stat-val{font-family:'Orbitron',sans-serif;font-size:20px;font-weight:900;color:#8b5cf6;}
+    /* Difficulty */
+    .diff-btns{display:flex;gap:8px;margin-bottom:18px;}
+    .diff-btn{padding:8px 18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:rgba(255,255,255,.6);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.2s;}
+    .diff-btn.active{background:rgba(139,92,246,.2);border-color:#8b5cf6;color:#fff;}
+    /* Grid */
+    .cards-grid{display:grid;gap:10px;margin-bottom:20px;}
+    .card{aspect-ratio:1;background:linear-gradient(135deg,rgba(139,92,246,.15),rgba(168,85,247,.1));border:2px solid rgba(139,92,246,.3);border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:clamp(24px,5vw,40px);transition:transform .3s,box-shadow .3s;perspective:600px;user-select:none;}
+    .card:hover:not(.flipped):not(.matched){transform:scale(1.05);box-shadow:0 8px 24px rgba(139,92,246,.3);}
+    .card.flipped,.card.matched{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);}
+    .card.matched{background:rgba(139,92,246,.2);border-color:#8b5cf6;animation:matchPop .4s ease;}
+    @keyframes matchPop{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+    .card .back{display:none;}
+    .card .front{font-size:clamp(20px,4vw,36px);}
+    .card:not(.flipped):not(.matched) .front{display:none;}
+    .card:not(.flipped):not(.matched) .back{display:block;font-size:28px;}
+    .controls{display:flex;gap:10px;}
+    .ctrl-btn{padding:10px 22px;border:none;border-radius:12px;color:#fff;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:.3s;}
+    .btn-play{background:linear-gradient(135deg,#8b5cf6,#7c3aed);}
+    .btn-play:hover{transform:translateY(-2px);}
+    .btn-back{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
+    /* Result */
+    .result-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;z-index:200;}
+    .result-overlay.show{display:flex;}
+    .result-box{background:#13132a;border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:44px 36px;text-align:center;max-width:340px;width:90%;animation:bounceIn .4s ease;}
+    @keyframes bounceIn{0%{transform:scale(.7);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+    .res-emoji{font-size:64px;display:block;margin-bottom:12px;}
+    .res-title{font-family:'Orbitron',sans-serif;font-size:20px;font-weight:900;margin-bottom:8px;}
+    .res-sub{color:rgba(255,255,255,.5);font-size:14px;margin-bottom:6px;}
+    .res-coins{color:#fbbf24;font-size:16px;font-weight:700;margin-bottom:20px;}
+    .res-btns{display:flex;gap:10px;justify-content:center;}
+    .res-btn{padding:11px 22px;border:none;border-radius:12px;color:#fff;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:.3s;}
+    .res-play{background:linear-gradient(135deg,#8b5cf6,#7c3aed);}
+    .res-home{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
+  </style>
+</head>
+<body>
+<nav class="navbar">
+  <button class="back-btn" onclick="goHome()">← Orqaga</button>
+  <div class="nav-logo">🃏 Memory</div>
+  <div class="coin-display">🪙 <span id="nav-coins">0</span></div>
+</nav>
+<div class="game-wrap">
+  <h1 class="game-title">MEMORY KARTA</h1>
+  <div class="stats-bar">
+    <div class="stat"><div class="stat-label">Urinish</div><div class="stat-val" id="moves">0</div></div>
+    <div class="stat"><div class="stat-label">Topildi</div><div class="stat-val" id="matched">0</div></div>
+    <div class="stat"><div class="stat-label">Vaqt</div><div class="stat-val" id="timer">0s</div></div>
+  </div>
+  <div class="diff-btns">
+    <button class="diff-btn active" onclick="setDiff(4,4,this)">4×4 Oson</button>
+    <button class="diff-btn" onclick="setDiff(4,5,this)">4×5 O'rta</button>
+    <button class="diff-btn" onclick="setDiff(5,6,this)">5×6 Qiyin</button>
+  </div>
+  <div class="cards-grid" id="cards-grid"></div>
+  <div class="controls">
+    <button class="ctrl-btn btn-play" onclick="startGame()">🔄 Yangi O'yin</button>
+    <button class="ctrl-btn btn-back" onclick="goHome()">🏠 Uy</button>
+  </div>
+</div>
+<div class="result-overlay" id="result-overlay">
+  <div class="result-box">
+    <span class="res-emoji">🏆</span>
+    <div class="res-title" id="res-title">Barakalla!</div>
+    <div class="res-sub"   id="res-sub"></div>
+    <div class="res-coins" id="res-coins"></div>
+    <div class="res-btns">
+      <button class="res-btn res-play" onclick="startGame()">🔄 Qayta</button>
+      <button class="res-btn res-home" onclick="goHome()">🏠 Uy</button>
+    </div>
+  </div>
+</div>
+<script src="firebase.js"></script>
+<script src="coins.js"></script>
+<script>
+const EMOJIS=['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐸','🐵','🐔','🐧','🐦','🦆','🦅','🦉','🦇','🐺','🐗','🦄','🐝','🐛','🦋','🐌','🐞','🐜'];
+
+let cols=4, rows=4, cards=[], flipped=[], matchedCount=0, moves=0, timerInt, seconds=0, canFlip=true;
+
+window.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('nav-coins').textContent=getCurrentUser()?.coins||0;
+  startGame();
+});
+
+function setDiff(c,r,btn){
+  cols=c; rows=r;
+  document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  startGame();
+}
+
+function startGame(){
+  clearInterval(timerInt); seconds=0; moves=0; matchedCount=0; flipped=[]; canFlip=true;
+  document.getElementById('moves').textContent='0';
+  document.getElementById('matched').textContent='0';
+  document.getElementById('timer').textContent='0s';
+  document.getElementById('result-overlay').classList.remove('show');
+
+  const total=cols*rows;
+  const pairs=total/2;
+  const pool=[...EMOJIS].sort(()=>Math.random()-.5).slice(0,pairs);
+  cards=[...pool,...pool].sort(()=>Math.random()-.5);
+
+  const grid=document.getElementById('cards-grid');
+  grid.style.gridTemplateColumns=`repeat(${cols},1fr)`;
+  grid.style.width=`min(${cols*72}px, 90vw)`;
+  grid.innerHTML='';
+
+  cards.forEach((emoji,i)=>{
+    const card=document.createElement('div');
+    card.className='card';
+    card.innerHTML=`<span class="back">🎴</span><span class="front">${emoji}</span>`;
+    card.dataset.idx=i;
+    card.dataset.emoji=emoji;
+    card.onclick=()=>flipCard(card);
+    grid.appendChild(card);
+  });
+
+  timerInt=setInterval(()=>{
+    seconds++;
+    document.getElementById('timer').textContent=seconds+'s';
+  },1000);
+}
+
+function flipCard(card){
+  if(!canFlip||card.classList.contains('flipped')||card.classList.contains('matched')) return;
+  card.classList.add('flipped');
+  flipped.push(card);
+  if(flipped.length===2){
+    moves++;
+    document.getElementById('moves').textContent=moves;
+    canFlip=false;
+    setTimeout(checkMatch,700);
+  }
+}
+
+function checkMatch(){
+  const [a,b]=flipped;
+  if(a.dataset.emoji===b.dataset.emoji){
+    a.classList.add('matched'); b.classList.add('matched');
+    matchedCount++;
+    document.getElementById('matched').textContent=matchedCount;
+    if(matchedCount===cards.length/2) endGame();
+  } else {
+    a.classList.remove('flipped'); b.classList.remove('flipped');
+  }
+  flipped=[]; canFlip=true;
+}
+
+function endGame(){
+  clearInterval(timerInt);
+  const total=cols*rows/2;
+  const pts=Math.max(10, Math.floor((total*100)/moves) + Math.max(0,120-seconds));
+  addCoins(pts); addResult(true);
+  document.getElementById('nav-coins').textContent=getCurrentUser()?.coins||0;
+  document.getElementById('res-title').textContent='Barakalla! 🎉';
+  document.getElementById('res-sub').textContent=`${moves} urinishda ${seconds}s da topdingiz!`;
+  document.getElementById('res-coins').textContent=`+🪙 ${pts} tanga!`;
+  setTimeout(()=>document.getElementById('result-overlay').classList.add('show'),400);
+}
+function goHome(){window.location.href='dashboard.html';}
+</script>
+</body>
+</html>

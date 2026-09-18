@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GameZone - Tic-Tac-Toe</title>
+  <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:#0a0a1a;color:#fff;font-family:'Rajdhani',sans-serif;min-height:100vh;display:flex;flex-direction:column;}
+    .navbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:rgba(10,10,26,.9);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.08);}
+    .nav-logo{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;background:linear-gradient(135deg,#6366f1,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .back-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;padding:8px 16px;border-radius:10px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;}
+    .coin-display{display:flex;align-items:center;gap:6px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.3);border-radius:20px;padding:6px 14px;font-size:15px;font-weight:700;color:#fbbf24;}
+    .game-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;}
+    .game-title{font-family:'Orbitron',sans-serif;font-size:26px;font-weight:900;background:linear-gradient(135deg,#fff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;}
+    .conn-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 14px;border-radius:20px;margin-bottom:14px;}
+    .conn-badge.online{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.3);}
+    .conn-badge.offline{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);}
+    .conn-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:blink 1.2s infinite;}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+    .players-bar{display:flex;align-items:center;gap:16px;margin-bottom:24px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:14px 24px;}
+    .player-info{display:flex;align-items:center;gap:10px;flex:1;}
+    .player-info.right{flex-direction:row-reverse;text-align:right;}
+    .p-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0;transition:.3s;}
+    .p-name{font-size:16px;font-weight:700;}
+    .p-symbol{font-size:22px;}
+    .vs-badge{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;color:rgba(255,255,255,.3);padding:6px 12px;background:rgba(255,255,255,.05);border-radius:8px;}
+    .active-player .p-avatar{box-shadow:0 0 0 3px #6366f1,0 0 20px rgba(99,102,241,.4);}
+    .active-player .p-name{color:#a78bfa;}
+    .status-bar{font-size:18px;font-weight:700;text-align:center;min-height:28px;margin-bottom:16px;color:rgba(255,255,255,.7);}
+    .board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px;}
+    .cell{width:clamp(90px,22vw,120px);height:clamp(90px,22vw,120px);background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.08);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:clamp(36px,10vw,56px);cursor:pointer;transition:.25s;user-select:none;}
+    .cell:hover:not(.taken){background:rgba(99,102,241,.15);border-color:rgba(99,102,241,.4);transform:scale(1.04);}
+    .cell.x{color:#6366f1;text-shadow:0 0 20px rgba(99,102,241,.6);}
+    .cell.o{color:#f43f5e;text-shadow:0 0 20px rgba(244,63,94,.6);}
+    .cell.win{animation:pulse .6s ease infinite alternate;}
+    @keyframes pulse{from{transform:scale(1)}to{transform:scale(1.06)}}
+    .cell.taken{cursor:not-allowed;}
+    .controls{display:flex;gap:12px;}
+    .ctrl-btn{padding:12px 28px;border:none;border-radius:12px;color:#fff;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.3s;letter-spacing:1px;}
+    .btn-play{background:linear-gradient(135deg,#6366f1,#8b5cf6);}
+    .btn-play:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(99,102,241,.4);}
+    .btn-back{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
+    /* Waiting */
+    .wait-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;z-index:150;}
+    .wait-box{background:#13132a;border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:44px 36px;text-align:center;max-width:340px;width:90%;}
+    .spinner{width:52px;height:52px;margin:0 auto 18px;border:4px solid rgba(255,255,255,.1);border-top-color:#6366f1;border-radius:50%;animation:spin 1s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .wait-title{font-family:'Orbitron',sans-serif;font-size:17px;font-weight:700;margin-bottom:8px;}
+    .wait-code{font-family:'Orbitron',sans-serif;font-size:30px;font-weight:900;color:#fbbf24;letter-spacing:4px;margin:12px 0;}
+    .wait-sub{color:rgba(255,255,255,.4);font-size:13px;margin-bottom:18px;}
+    .cancel-btn{padding:10px 24px;background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);border-radius:10px;color:#f87171;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;cursor:pointer;}
+    /* Result */
+    .result-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;z-index:200;}
+    .result-overlay.show{display:flex;}
+    .result-box{background:#13132a;border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:44px 36px;text-align:center;max-width:340px;width:90%;animation:bounceIn .4s ease;}
+    @keyframes bounceIn{0%{transform:scale(.7);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+    .res-emoji{font-size:68px;display:block;margin-bottom:14px;}
+    .res-title{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:900;margin-bottom:8px;}
+    .res-sub{color:rgba(255,255,255,.5);font-size:14px;margin-bottom:8px;}
+    .res-coins{color:#fbbf24;font-size:17px;font-weight:700;margin-bottom:24px;}
+    .res-btns{display:flex;gap:12px;justify-content:center;}
+    .res-btn{padding:11px 22px;border:none;border-radius:12px;color:#fff;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:.3s;}
+    .res-play{background:linear-gradient(135deg,#6366f1,#8b5cf6);}
+    .res-home{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
+  </style>
+</head>
+<body>
+<nav class="navbar">
+  <button class="back-btn" onclick="goHome()">в†ђ Orqaga</button>
+  <div class="nav-logo">в­• Tic-Tac-Toe</div>
+  <div class="coin-display">рџЄ™ <span id="nav-coins">0</span></div>
+</nav>
+<div class="game-wrap">
+  <h1 class="game-title">Tic-Tac-Toe</h1>
+  <div class="conn-badge online" id="conn-badge"><span class="conn-dot"></span><span id="conn-text">Ulangan</span></div>
+  <div class="players-bar">
+    <div class="player-info" id="p1-info">
+      <div class="p-avatar" id="p1-av">?</div>
+      <div><div class="p-name" id="p1-name">O'yinchi 1</div><div class="p-symbol">вњ•</div></div>
+    </div>
+    <div class="vs-badge">VS</div>
+    <div class="player-info right" id="p2-info">
+      <div class="p-avatar" id="p2-av">?</div>
+      <div><div class="p-name" id="p2-name">O'yinchi 2</div><div class="p-symbol">в—‹</div></div>
+    </div>
+  </div>
+  <div class="status-bar" id="status">Yuklanmoqda...</div>
+  <div class="board" id="board">
+    <div class="cell" onclick="makeMove(0)"></div><div class="cell" onclick="makeMove(1)"></div><div class="cell" onclick="makeMove(2)"></div>
+    <div class="cell" onclick="makeMove(3)"></div><div class="cell" onclick="makeMove(4)"></div><div class="cell" onclick="makeMove(5)"></div>
+    <div class="cell" onclick="makeMove(6)"></div><div class="cell" onclick="makeMove(7)"></div><div class="cell" onclick="makeMove(8)"></div>
+  </div>
+  <div class="controls">
+    <button class="ctrl-btn btn-play" onclick="resetGame()">рџ”„ Qayta</button>
+    <button class="ctrl-btn btn-back" onclick="goHome()">рџЏ  Uy</button>
+  </div>
+</div>
+
+<!-- Waiting -->
+<div class="wait-overlay" id="wait-overlay" style="display:none">
+  <div class="wait-box">
+    <div class="spinner"></div>
+    <div class="wait-title">Raqib kutilmoqda...</div>
+    <div class="wait-sub">Xona kodi:</div>
+    <div class="wait-code" id="wait-code">вЂ”</div>
+    <div class="wait-sub">Raqibingizga shu kodni yuboring</div>
+    <button class="cancel-btn" onclick="goHome()">вњ• Bekor</button>
+  </div>
+</div>
+
+<!-- Result -->
+<div class="result-overlay" id="result-overlay">
+  <div class="result-box">
+    <span class="res-emoji" id="res-emoji">рџЏ†</span>
+    <div class="res-title" id="res-title"></div>
+    <div class="res-sub"   id="res-sub"></div>
+    <div class="res-coins" id="res-coins"></div>
+    <div class="res-btns">
+      <button class="res-btn res-play" onclick="resetGame()">рџ”„ Qayta</button>
+      <button class="res-btn res-home" onclick="goHome()">рџЏ  Uy</button>
+    </div>
+  </div>
+</div>
+
+<script src="firebase.js"></script>
+<script src="coins.js"></script>
+<script>
+const session  = JSON.parse(localStorage.getItem('gz_session') || '{}');
+const myKey    = localStorage.getItem('gz_current_user') || '';
+const p1Key    = session.player1 || myKey;
+const p2Key    = session.player2 || 'cpu';
+const roomCode = session.roomCode || '';
+const reward   = session.reward   || 50;
+const isSolo   = !session.player2 || session.player2 === 'cpu';
+const amIP1    = myKey === p1Key;
+
+const usersObj = getUsers();
+const p1User   = usersObj[p1Key] || { username: p1Key || 'O\'yinchi 1', skinColor: '#6366f1' };
+const p2User   = isSolo ? { username: 'CPU рџ¤–', skinColor: '#f43f5e' }
+                        : (usersObj[p2Key] || { username: p2Key, skinColor: '#f43f5e' });
+
+let board = Array(9).fill('');
+let currentTurn = 'X';
+let gameOver = false;
+let _statUnsub = null;
+
+const WINS = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('nav-coins').textContent = getCurrentUser()?.coins || 0;
+  setupPlayers();
+  if (!isSolo) {
+    // Ably state listener
+    _statUnsub = listenState('tictactoe', roomCode, (data) => {
+      if (gameOver) return;
+      // Opponent move
+      const oppTurn = amIP1 ? 'O' : 'X';
+      if (data.turn === (amIP1 ? 'X' : 'O')) {
+        // This is from opponent - apply
+        board = data.board;
+        currentTurn = data.turn;
+        renderBoard();
+        highlightActive();
+        updateStatus();
+        const w = checkWinner();
+        if (w) endGame(w);
+        else if (board.every(c => c)) endGame('draw');
+      }
+    });
+    setConn(true);
+  }
+  updateStatus();
+});
+
+function setupPlayers() {
+  document.getElementById('p1-name').textContent = p1User.username;
+  document.getElementById('p1-av').textContent   = p1User.username.charAt(0).toUpperCase();
+  document.getElementById('p1-av').style.background = p1User.skinColor || '#6366f1';
+  document.getElementById('p2-name').textContent = p2User.username;
+  document.getElementById('p2-av').textContent   = p2User.username.charAt(0).toUpperCase();
+  document.getElementById('p2-av').style.background = p2User.skinColor || '#f43f5e';
+  highlightActive();
+}
+
+function setConn(ok) {
+  const b = document.getElementById('conn-badge');
+  b.className = `conn-badge ${ok ? 'online' : 'offline'}`;
+  document.getElementById('conn-text').textContent = ok ? 'Ulangan' : 'Ulanmagan';
+}
+
+function makeMove(idx) {
+  if (gameOver || board[idx]) return;
+  if (!isSolo) {
+    const myTurn = amIP1 ? 'X' : 'O';
+    if (currentTurn !== myTurn) { showToast('вЏі Raqib navbati!', 'error'); return; }
+  }
+
+  board[idx] = currentTurn;
+  const cell = document.querySelectorAll('.cell')[idx];
+  cell.textContent = currentTurn === 'X' ? 'вњ•' : 'в—‹';
+  cell.classList.add(currentTurn.toLowerCase(), 'taken');
+
+  const winner = checkWinner();
+  if (winner) { endGame(winner); return; }
+  if (board.every(c => c)) { endGame('draw'); return; }
+
+  const nextTurn = currentTurn === 'X' ? 'O' : 'X';
+
+  // Send to opponent
+  if (!isSolo) {
+    sendState('tictactoe', roomCode, { board, turn: nextTurn });
+  }
+
+  currentTurn = nextTurn;
+  highlightActive();
+  updateStatus();
+
+  if (isSolo && currentTurn === 'O') setTimeout(cpuMove, 500);
+}
+
+function cpuMove() {
+  const move = findBest('O') ?? findBest('X') ?? (board[4] === '' ? 4 : null) ?? rndEmpty();
+  if (move !== null) makeMove(move);
+}
+function findBest(s) {
+  for (const [a,b,c] of WINS) {
+    const l = [board[a],board[b],board[c]];
+    if (l.filter(v => v===s).length===2 && l.includes('')) return [a,b,c][l.indexOf('')];
+  }
+  return null;
+}
+function rndEmpty() {
+  const e = board.map((v,i) => v?null:i).filter(v => v!==null);
+  return e.length ? e[Math.floor(Math.random()*e.length)] : null;
+}
+
+function checkWinner() {
+  for (const [a,b,c] of WINS) {
+    if (board[a] && board[a]===board[b] && board[b]===board[c]) {
+      [a,b,c].forEach(i => document.querySelectorAll('.cell')[i].classList.add('win'));
+      return board[a];
+    }
+  }
+  return null;
+}
+
+function renderBoard() {
+  document.querySelectorAll('.cell').forEach((cell, i) => {
+    cell.textContent = '';
+    cell.className = 'cell';
+    if (board[i]) {
+      cell.textContent = board[i]==='X' ? 'вњ•' : 'в—‹';
+      cell.classList.add(board[i].toLowerCase(), 'taken');
+    }
+  });
+}
+
+function highlightActive() {
+  document.getElementById('p1-info').classList.toggle('active-player', currentTurn==='X');
+  document.getElementById('p2-info').classList.toggle('active-player', currentTurn==='O');
+}
+function updateStatus() {
+  if (gameOver) return;
+  const name = currentTurn==='X' ? p1User.username : p2User.username;
+  document.getElementById('status').textContent = `${name} navbati (${currentTurn==='X'?'вњ•':'в—‹'})`;
+}
+
+function endGame(result) {
+  gameOver = true;
+  if (_statUnsub) { _statUnsub(); _statUnsub = null; }
+  document.querySelectorAll('.cell').forEach(c => c.classList.add('taken'));
+
+  let emoji, title, sub, coinsText = '';
+  if (result === 'draw') {
+    emoji='рџ¤ќ'; title='Durang!'; sub='Ikki o\'yinchi teng!';
+  } else {
+    const iWon = (result==='X'&&amIP1)||(result==='O'&&!amIP1)||(isSolo&&result==='X');
+    if (iWon) {
+      emoji='рџЏ†'; title='G\'OLIBSIZ!'; sub=`Tabriklaymiz!`;
+      coinsText=`+рџЄ™ ${reward} tanga!`;
+      addCoins(reward); addResult(true);
+      document.getElementById('nav-coins').textContent = getCurrentUser()?.coins||0;
+    } else {
+      emoji='рџў'; title='Yutqazdingiz'; sub='Keyingi safar omad!';
+      addResult(false);
+    }
+  }
+
+  setTimeout(() => {
+    document.getElementById('res-emoji').textContent  = emoji;
+    document.getElementById('res-title').textContent  = title;
+    document.getElementById('res-sub').textContent    = sub;
+    document.getElementById('res-coins').textContent  = coinsText;
+    document.getElementById('result-overlay').classList.add('show');
+    refreshCoinDisplay();
+  }, 600);
+}
+
+function resetGame() {
+  board = Array(9).fill('');
+  currentTurn = 'X';
+  gameOver = false;
+  document.getElementById('result-overlay').classList.remove('show');
+  renderBoard();
+  updateStatus();
+  highlightActive();
+  if (!isSolo) sendState('tictactoe', roomCode, { board, turn: 'X', reset: true });
+}
+
+function goHome() {
+  if (_statUnsub) _statUnsub();
+  window.location.href = 'dashboard.html';
+}
+</script>
+</body>
+</html>
+

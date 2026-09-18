@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GameZone - Typing Race</title>
+  <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:#0a0a1a;color:#fff;font-family:'Rajdhani',sans-serif;min-height:100vh;display:flex;flex-direction:column;}
+    .navbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:rgba(10,10,26,.9);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.08);}
+    .nav-logo{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;background:linear-gradient(135deg,#06b6d4,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .back-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;padding:8px 16px;border-radius:10px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;}
+    .coin-display{display:flex;align-items:center;gap:6px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.3);border-radius:20px;padding:6px 14px;font-size:15px;font-weight:700;color:#fbbf24;}
+    .game-wrap{flex:1;display:flex;flex-direction:column;align-items:center;padding:20px 16px;max-width:700px;margin:0 auto;width:100%;}
+    .game-title{font-family:'Orbitron',sans-serif;font-size:24px;font-weight:900;background:linear-gradient(135deg,#06b6d4,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:14px;}
+    /* Stats */
+    .stats-bar{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;justify-content:center;}
+    .stat{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:8px 16px;text-align:center;}
+    .stat-label{font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;}
+    .stat-val{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;color:#06b6d4;}
+    /* Race track (progress bars) */
+    .race-track{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px 18px;margin-bottom:16px;}
+    .racer{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+    .racer:last-child{margin-bottom:0;}
+    .racer-name{font-size:13px;font-weight:700;width:80px;flex-shrink:0;}
+    .racer-bar{flex:1;height:18px;background:rgba(255,255,255,.06);border-radius:10px;overflow:hidden;}
+    .racer-fill{height:100%;border-radius:10px;transition:width .2s ease;}
+    .racer-pct{font-size:12px;font-weight:700;width:40px;text-align:right;flex-shrink:0;}
+    /* Text display */
+    .text-display{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:20px;font-size:clamp(15px,3vw,18px);line-height:1.8;margin-bottom:16px;letter-spacing:.5px;}
+    .char{transition:background .1s;}
+    .char.correct{color:#10b981;}
+    .char.wrong{color:#ef4444;background:rgba(239,68,68,.2);border-radius:3px;}
+    .char.cursor{border-bottom:3px solid #06b6d4;animation:blink .8s infinite;}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+    /* Input */
+    .type-input{width:100%;padding:14px 18px;background:rgba(255,255,255,.06);border:2px solid rgba(6,182,212,.3);border-radius:14px;color:#fff;font-family:'Rajdhani',sans-serif;font-size:16px;outline:none;transition:.3s;margin-bottom:14px;}
+    .type-input:focus{border-color:#06b6d4;box-shadow:0 0 0 3px rgba(6,182,212,.15);}
+    .type-input:disabled{opacity:.5;}
+    .countdown{font-family:'Orbitron',sans-serif;font-size:48px;font-weight:900;text-align:center;color:#06b6d4;min-height:64px;margin-bottom:10px;}
+    .controls{display:flex;gap:10px;}
+    .ctrl-btn{padding:10px 22px;border:none;border-radius:12px;color:#fff;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:.3s;}
+    .btn-play{background:linear-gradient(135deg,#06b6d4,#3b82f6);}
+    .btn-play:hover{transform:translateY(-2px);}
+    .btn-back{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
+    .result-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;z-index:200;}
+    .result-overlay.show{display:flex;}
+    .result-box{background:#13132a;border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:44px 36px;text-align:center;max-width:380px;width:90%;animation:bounceIn .4s ease;}
+    @keyframes bounceIn{0%{transform:scale(.7);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+    .res-emoji{font-size:64px;display:block;margin-bottom:12px;}
+    .res-title{font-family:'Orbitron',sans-serif;font-size:20px;font-weight:900;margin-bottom:10px;}
+    .res-stats{display:flex;gap:16px;justify-content:center;margin-bottom:10px;flex-wrap:wrap;}
+    .rs{text-align:center;background:rgba(255,255,255,.05);border-radius:10px;padding:10px 16px;}
+    .rs-label{font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;}
+    .rs-val{font-family:'Orbitron',sans-serif;font-size:20px;font-weight:900;color:#06b6d4;}
+    .res-sub{color:rgba(255,255,255,.5);font-size:14px;margin-bottom:6px;}
+    .res-coins{color:#fbbf24;font-size:16px;font-weight:700;margin-bottom:20px;}
+    .res-btns{display:flex;gap:10px;justify-content:center;}
+    .res-btn{padding:11px 22px;border:none;border-radius:12px;color:#fff;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;cursor:pointer;}
+    .res-play{background:linear-gradient(135deg,#06b6d4,#3b82f6);}
+    .res-home{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
+  </style>
+</head>
+<body>
+<nav class="navbar">
+  <button class="back-btn" onclick="goHome()">← Orqaga</button>
+  <div class="nav-logo">⌨️ Typing Race</div>
+  <div class="coin-display">🪙 <span id="nav-coins">0</span></div>
+</nav>
+<div class="game-wrap">
+  <h1 class="game-title">TYPING RACE</h1>
+  <div class="stats-bar">
+    <div class="stat"><div class="stat-label">WPM</div><div class="stat-val" id="wpm">0</div></div>
+    <div class="stat"><div class="stat-label">Aniqlik</div><div class="stat-val" id="accuracy">100%</div></div>
+    <div class="stat"><div class="stat-label">Vaqt</div><div class="stat-val" id="timer">60s</div></div>
+    <div class="stat"><div class="stat-label">So'z</div><div class="stat-val" id="word-count">0</div></div>
+  </div>
+  <!-- Race track -->
+  <div class="race-track">
+    <div class="racer">
+      <div class="racer-name" id="r1-name" style="color:#06b6d4">Siz</div>
+      <div class="racer-bar"><div class="racer-fill" id="r1-fill" style="background:#06b6d4;width:0%"></div></div>
+      <div class="racer-pct" id="r1-pct">0%</div>
+    </div>
+    <div class="racer">
+      <div class="racer-name" style="color:#f59e0b">CPU</div>
+      <div class="racer-bar"><div class="racer-fill" id="r2-fill" style="background:#f59e0b;width:0%"></div></div>
+      <div class="racer-pct" id="r2-pct">0%</div>
+    </div>
+  </div>
+  <div class="countdown" id="countdown"></div>
+  <div class="text-display" id="text-display"></div>
+  <input type="text" id="type-input" class="type-input" placeholder="Bu yerga yozing..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" disabled/>
+  <div class="controls">
+    <button class="ctrl-btn btn-play" onclick="startGame()">▶ Boshlash</button>
+    <button class="ctrl-btn btn-back" onclick="goHome()">🏠 Uy</button>
+  </div>
+</div>
+<div class="result-overlay" id="result-overlay">
+  <div class="result-box">
+    <span class="res-emoji" id="res-emoji">🏆</span>
+    <div class="res-title" id="res-title"></div>
+    <div class="res-stats">
+      <div class="rs"><div class="rs-label">WPM</div><div class="rs-val" id="fin-wpm">0</div></div>
+      <div class="rs"><div class="rs-label">Aniqlik</div><div class="rs-val" id="fin-acc">0%</div></div>
+      <div class="rs"><div class="rs-label">So'z</div><div class="rs-val" id="fin-words">0</div></div>
+    </div>
+    <div class="res-sub" id="res-sub"></div>
+    <div class="res-coins" id="res-coins"></div>
+    <div class="res-btns">
+      <button class="res-btn res-play" onclick="startGame()">🔄 Qayta</button>
+      <button class="res-btn res-home" onclick="goHome()">🏠 Uy</button>
+    </div>
+  </div>
+</div>
+<script src="firebase.js"></script>
+<script src="coins.js"></script>
+<script>
+const TEXTS = [
+  "the quick brown fox jumps over the lazy dog and runs away into the forest where many animals live together peacefully",
+  "programming is the art of telling a computer what to do in a language that both humans and machines can understand clearly",
+  "practice makes perfect when it comes to typing faster and with greater accuracy every single day of your life",
+  "the sun rises in the east and sets in the west creating beautiful colors across the sky every morning and evening",
+  "learning new skills takes time and effort but the rewards are always worth it in the long run believe in yourself",
+  "technology has changed the way we communicate work and live our daily lives in ways that were unimaginable just decades ago",
+];
+
+const TIME_LIMIT=60, CPU_WPM=45;
+let text='',typed='',startTime,timerInt,cpuInt,gameOver=false,correctChars=0,totalChars=0,cpuProgress=0;
+
+window.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('nav-coins').textContent=getCurrentUser()?.coins||0;
+  document.getElementById('r1-name').textContent=getCurrentUser()?.username||'Siz';
+  document.getElementById('type-input').addEventListener('input',onType);
+});
+
+function startGame(){
+  gameOver=false; typed=''; correctChars=0; totalChars=0; cpuProgress=0;
+  text=TEXTS[Math.floor(Math.random()*TEXTS.length)];
+  document.getElementById('result-overlay').classList.remove('show');
+  document.getElementById('type-input').value='';
+  document.getElementById('type-input').disabled=true;
+  document.getElementById('wpm').textContent='0';
+  document.getElementById('accuracy').textContent='100%';
+  document.getElementById('word-count').textContent='0';
+  document.getElementById('r1-fill').style.width='0%';
+  document.getElementById('r2-fill').style.width='0%';
+  document.getElementById('r1-pct').textContent='0%';
+  document.getElementById('r2-pct').textContent='0%';
+  renderText();
+  // Countdown
+  let cnt=3;
+  document.getElementById('countdown').textContent=cnt;
+  const cdInt=setInterval(()=>{
+    cnt--;
+    if(cnt>0) document.getElementById('countdown').textContent=cnt;
+    else if(cnt===0){document.getElementById('countdown').textContent='GO!';}
+    else{
+      clearInterval(cdInt);
+      document.getElementById('countdown').textContent='';
+      document.getElementById('type-input').disabled=false;
+      document.getElementById('type-input').focus();
+      startTime=Date.now();
+      startTimer();
+      startCPU();
+    }
+  },1000);
+}
+
+function startTimer(){
+  let remaining=TIME_LIMIT;
+  document.getElementById('timer').textContent=remaining+'s';
+  timerInt=setInterval(()=>{
+    remaining--;
+    document.getElementById('timer').textContent=remaining+'s';
+    updateWPM();
+    if(remaining<=0){clearInterval(timerInt);if(!gameOver)endGame(false);}
+  },1000);
+}
+
+function startCPU(){
+  const charsPerSec=CPU_WPM*5/60;
+  cpuInt=setInterval(()=>{
+    if(gameOver) return;
+    cpuProgress=Math.min(text.length,cpuProgress+charsPerSec*(1+Math.random()*.4-.2));
+    const pct=Math.round(cpuProgress/text.length*100);
+    document.getElementById('r2-fill').style.width=pct+'%';
+    document.getElementById('r2-pct').textContent=pct+'%';
+    if(cpuProgress>=text.length){clearInterval(cpuInt);if(!gameOver)endGame(false);}
+  },200);
+}
+
+function onType(e){
+  if(gameOver) return;
+  typed=e.target.value;
+  totalChars++;
+  // Count correct
+  let cc=0;
+  for(let i=0;i<typed.length;i++) if(typed[i]===text[i]) cc++;
+  correctChars=cc;
+  // Progress
+  const pct=Math.round(typed.length/text.length*100);
+  document.getElementById('r1-fill').style.width=Math.min(100,pct)+'%';
+  document.getElementById('r1-pct').textContent=Math.min(100,pct)+'%';
+  renderText();
+  updateWPM();
+  // Word count
+  const words=typed.trim().split(/\s+/).filter(Boolean).length;
+  document.getElementById('word-count').textContent=words;
+  if(typed.length>=text.length) endGame(true);
+}
+
+function renderText(){
+  const el=document.getElementById('text-display');
+  el.innerHTML=text.split('').map((ch,i)=>{
+    let cls='char';
+    if(i<typed.length) cls+= typed[i]===ch?' correct':' wrong';
+    else if(i===typed.length) cls+=' cursor';
+    return `<span class="${cls}">${ch}</span>`;
+  }).join('');
+}
+
+function updateWPM(){
+  const elapsed=(Date.now()-startTime)/60000;
+  if(elapsed<=0) return;
+  const words=typed.trim().split(/\s+/).filter(Boolean).length;
+  const wpm=Math.round(words/elapsed);
+  const acc=totalChars>0?Math.round(correctChars/totalChars*100):100;
+  document.getElementById('wpm').textContent=wpm;
+  document.getElementById('accuracy').textContent=acc+'%';
+}
+
+function endGame(playerFinished){
+  if(gameOver) return;
+  gameOver=true;
+  clearInterval(timerInt); clearInterval(cpuInt);
+  document.getElementById('type-input').disabled=true;
+
+  const elapsed=(Date.now()-startTime)/60000;
+  const words=typed.trim().split(/\s+/).filter(Boolean).length;
+  const wpm=Math.round(words/elapsed);
+  const acc=totalChars>0?Math.round(correctChars/totalChars*100):100;
+  const cpuPct=Math.round(cpuProgress/text.length*100);
+  const myPct=Math.round(typed.length/text.length*100);
+  const won=playerFinished||(myPct>=cpuPct&&myPct>20);
+  const pts=won?Math.max(30,Math.round(wpm*acc/100)):0;
+
+  if(pts>0){addCoins(pts);addResult(true);}else if(!won)addResult(false);
+  document.getElementById('nav-coins').textContent=getCurrentUser()?.coins||0;
+  document.getElementById('res-emoji').textContent=won?'🏆':'😢';
+  document.getElementById('res-title').textContent=won?'G\'OLIBSIZ!':'Yutqazdingiz';
+  document.getElementById('fin-wpm').textContent=wpm;
+  document.getElementById('fin-acc').textContent=acc+'%';
+  document.getElementById('fin-words').textContent=words;
+  document.getElementById('res-sub').textContent=won?`Siz ${myPct}% — CPU ${cpuPct}%`:`CPU ${cpuPct}% — Siz ${myPct}%`;
+  document.getElementById('res-coins').textContent=pts>0?`+🪙 ${pts} tanga!`:'';
+  document.getElementById('result-overlay').classList.add('show');
+}
+function goHome(){window.location.href='dashboard.html';}
+</script>
+</body>
+</html>

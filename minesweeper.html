@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GameZone - Minalar</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:#0a0a1a;color:#fff;font-family:'Rajdhani',sans-serif;min-height:100vh;display:flex;flex-direction:column;}
+    .navbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:rgba(10,10,26,.9);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.08);}
+    .nav-logo{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;background:linear-gradient(135deg,#ef4444,#dc2626);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .back-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;padding:8px 16px;border-radius:10px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;}
+    .coin-display{display:flex;align-items:center;gap:6px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.3);border-radius:20px;padding:6px 14px;font-size:15px;font-weight:700;color:#fbbf24;}
+    .game-wrap{flex:1;display:flex;flex-direction:column;align-items:center;padding:20px 16px;}
+    .game-title{font-family:'Orbitron',sans-serif;font-size:24px;font-weight:900;background:linear-gradient(135deg,#ef4444,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px;}
+    .diff-btns{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;justify-content:center;}
+    .diff-btn{padding:8px 16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:rgba(255,255,255,.6);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.2s;}
+    .diff-btn.active{background:rgba(239,68,68,.2);border-color:#ef4444;color:#fff;}
+    .stats-bar{display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap;justify-content:center;}
+    .stat{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:7px 16px;text-align:center;}
+    .stat-label{font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;}
+    .stat-val{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;color:#ef4444;}
+    .hint{color:rgba(255,255,255,.3);font-size:12px;margin-bottom:10px;text-align:center;}
+    /* Board */
+    .board-wrap{overflow:auto;max-width:95vw;}
+    .board{display:inline-grid;gap:3px;margin-bottom:16px;}
+    .cell{width:clamp(28px,6vw,38px);height:clamp(28px,6vw,38px);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:clamp(12px,2.5vw,16px);font-weight:700;cursor:pointer;transition:.15s;user-select:none;}
+    .cell:hover:not(.open):not(.flagged){background:rgba(255,255,255,.15);}
+    .cell.open{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.05);cursor:default;}
+    .cell.flagged{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.4);}
+    .cell.mine{background:rgba(239,68,68,.3);border-color:#ef4444;}
+    .cell.safe{background:rgba(16,185,129,.2);border-color:#10b981;animation:safePop .3s ease;}
+    @keyframes safePop{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+    .n1{color:#60a5fa;}.n2{color:#34d399;}.n3{color:#f87171;}.n4{color:#818cf8;}
+    .n5{color:#fb923c;}.n6{color:#22d3ee;}.n7{color:#e879f9;}.n8{color:#94a3b8;}
+    .controls{display:flex;gap:10px;}
+    .ctrl-btn{padding:10px 22px;border:none;border-radius:12px;color:#fff;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:.3s;}
+    .btn-play{background:linear-gradient(135deg,#ef4444,#dc2626);}
+    .btn-play:hover{transform:translateY(-2px);}
+    .btn-back{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
+    .result-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;z-index:200;}
+    .result-overlay.show{display:flex;}
+    .result-box{background:#13132a;border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:44px 36px;text-align:center;max-width:340px;width:90%;animation:bounceIn .4s ease;}
+    @keyframes bounceIn{0%{transform:scale(.7);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+    .res-emoji{font-size:64px;display:block;margin-bottom:12px;}
+    .res-title{font-family:'Orbitron',sans-serif;font-size:20px;font-weight:900;margin-bottom:8px;}
+    .res-sub{color:rgba(255,255,255,.5);font-size:14px;margin-bottom:6px;}
+    .res-coins{color:#fbbf24;font-size:16px;font-weight:700;margin-bottom:20px;}
+    .res-btns{display:flex;gap:10px;justify-content:center;}
+    .res-btn{padding:11px 22px;border:none;border-radius:12px;color:#fff;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;cursor:pointer;}
+    .res-play{background:linear-gradient(135deg,#ef4444,#dc2626);}
+    .res-home{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
+  </style>
+</head>
+<body>
+<nav class="navbar">
+  <button class="back-btn" onclick="goHome()">← Orqaga</button>
+  <div class="nav-logo">💣 Minalar</div>
+  <div class="coin-display">🪙 <span id="nav-coins">0</span></div>
+</nav>
+<div class="game-wrap">
+  <h1 class="game-title">MINALAR O'YINI</h1>
+  <div class="diff-btns">
+    <button class="diff-btn active" onclick="setDiff(9,9,10,this)">😊 Oson 9×9</button>
+    <button class="diff-btn" onclick="setDiff(16,16,40,this)">😤 O'rta 16×16</button>
+    <button class="diff-btn" onclick="setDiff(16,30,99,this)">💀 Qiyin 16×30</button>
+  </div>
+  <div class="stats-bar">
+    <div class="stat"><div class="stat-label">💣 Minalar</div><div class="stat-val" id="mines-left">10</div></div>
+    <div class="stat"><div class="stat-label">⏱ Vaqt</div><div class="stat-val" id="timer">0</div></div>
+    <div class="stat"><div class="stat-label">✅ Ochildi</div><div class="stat-val" id="opened">0</div></div>
+  </div>
+  <div class="hint">Chap klik — ochish | O'ng klik — bayroq 🚩</div>
+  <div class="board-wrap"><div class="board" id="board"></div></div>
+  <div class="controls">
+    <button class="ctrl-btn btn-play" onclick="startGame()">🔄 Yangi O'yin</button>
+    <button class="ctrl-btn btn-back" onclick="goHome()">🏠 Uy</button>
+  </div>
+</div>
+<div class="result-overlay" id="result-overlay">
+  <div class="result-box">
+    <span class="res-emoji" id="res-emoji">💣</span>
+    <div class="res-title" id="res-title"></div>
+    <div class="res-sub"   id="res-sub"></div>
+    <div class="res-coins" id="res-coins"></div>
+    <div class="res-btns">
+      <button class="res-btn res-play" onclick="startGame()">🔄 Qayta</button>
+      <button class="res-btn res-home" onclick="goHome()">🏠 Uy</button>
+    </div>
+  </div>
+</div>
+<script src="firebase.js"></script>
+<script src="coins.js"></script>
+<script>
+let ROWS=9,COLS=9,MINES=10;
+let board=[],revealed=[],flagged=[],gameOver=false,firstClick=true,seconds=0,timerInt,openedCount=0;
+
+window.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('nav-coins').textContent=getCurrentUser()?.coins||0;
+  startGame();
+});
+
+function setDiff(r,c,m,btn){
+  ROWS=r;COLS=c;MINES=m;
+  document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  startGame();
+}
+
+function startGame(){
+  clearInterval(timerInt); seconds=0; gameOver=false; firstClick=true; openedCount=0;
+  document.getElementById('timer').textContent='0';
+  document.getElementById('mines-left').textContent=MINES;
+  document.getElementById('opened').textContent='0';
+  document.getElementById('result-overlay').classList.remove('show');
+  board=Array.from({length:ROWS},()=>Array(COLS).fill(0));
+  revealed=Array.from({length:ROWS},()=>Array(COLS).fill(false));
+  flagged=Array.from({length:ROWS},()=>Array(COLS).fill(false));
+  renderBoard();
+}
+
+function placeMines(safeR,safeC){
+  let placed=0;
+  while(placed<MINES){
+    const r=Math.floor(Math.random()*ROWS),c=Math.floor(Math.random()*COLS);
+    if(board[r][c]===-1) continue;
+    if(Math.abs(r-safeR)<=1&&Math.abs(c-safeC)<=1) continue;
+    board[r][c]=-1; placed++;
+  }
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    if(board[r][c]===-1) continue;
+    board[r][c]=countMines(r,c);
+  }
+}
+
+function countMines(r,c){
+  let n=0;
+  for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+    const nr=r+dr,nc=c+dc;
+    if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS&&board[nr][nc]===-1) n++;
+  }
+  return n;
+}
+
+function renderBoard(){
+  const el=document.getElementById('board');
+  el.style.gridTemplateColumns=`repeat(${COLS},1fr)`;
+  el.innerHTML='';
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const cell=document.createElement('div');
+    cell.className='cell'; cell.dataset.r=r; cell.dataset.c=c;
+    cell.onclick=()=>open(r,c);
+    cell.oncontextmenu=(e)=>{e.preventDefault();toggleFlag(r,c);};
+    el.appendChild(cell);
+  }
+}
+
+function updateCell(r,c){
+  const el=document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+  if(!el) return;
+  if(flagged[r][c]){el.textContent='🚩';el.className='cell flagged';return;}
+  if(!revealed[r][c]){el.textContent='';el.className='cell';return;}
+  if(board[r][c]===-1){el.textContent='💣';el.className='cell mine';return;}
+  el.className=`cell open${board[r][c]>0?' n'+board[r][c]:''}`;
+  el.textContent=board[r][c]>0?board[r][c]:'';
+}
+
+function open(r,c){
+  if(gameOver||revealed[r][c]||flagged[r][c]) return;
+  if(firstClick){
+    firstClick=false;
+    placeMines(r,c);
+    timerInt=setInterval(()=>{seconds++;document.getElementById('timer').textContent=seconds;},1000);
+  }
+  if(board[r][c]===-1){boom(r,c);return;}
+  floodFill(r,c);
+  checkWin();
+}
+
+function floodFill(r,c){
+  if(r<0||r>=ROWS||c<0||c>=COLS||revealed[r][c]||flagged[r][c]) return;
+  revealed[r][c]=true; openedCount++;
+  document.getElementById('opened').textContent=openedCount;
+  updateCell(r,c);
+  if(board[r][c]===0) for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++) floodFill(r+dr,c+dc);
+}
+
+function toggleFlag(r,c){
+  if(gameOver||revealed[r][c]) return;
+  flagged[r][c]=!flagged[r][c];
+  const total=flagged.flat().filter(Boolean).length;
+  document.getElementById('mines-left').textContent=MINES-total;
+  updateCell(r,c);
+}
+
+function boom(r,c){
+  clearInterval(timerInt); gameOver=true;
+  revealed[r][c]=true; updateCell(r,c);
+  // reveal all mines
+  for(let rr=0;rr<ROWS;rr++) for(let cc=0;cc<COLS;cc++){
+    if(board[rr][cc]===-1&&!(rr===r&&cc===c)){revealed[rr][cc]=true;updateCell(rr,cc);}
+  }
+  addResult(false);
+  setTimeout(()=>{
+    document.getElementById('res-emoji').textContent='💥';
+    document.getElementById('res-title').textContent='BOOM!';
+    document.getElementById('res-sub').textContent=`${seconds}s da minaga tegdingiz!`;
+    document.getElementById('res-coins').textContent='';
+    document.getElementById('result-overlay').classList.add('show');
+  },600);
+}
+
+function checkWin(){
+  const total=ROWS*COLS-MINES;
+  if(openedCount>=total){
+    clearInterval(timerInt); gameOver=true;
+    const pts=Math.floor((MINES*10)/Math.max(1,seconds)*10);
+    addCoins(pts); addResult(true);
+    document.getElementById('nav-coins').textContent=getCurrentUser()?.coins||0;
+    setTimeout(()=>{
+      document.getElementById('res-emoji').textContent='🏆';
+      document.getElementById('res-title').textContent='G\'OLIBSIZ!';
+      document.getElementById('res-sub').textContent=`${seconds}s da barcha maydonni tozaladingiz!`;
+      document.getElementById('res-coins').textContent=`+🪙 ${pts} tanga!`;
+      document.getElementById('result-overlay').classList.add('show');
+    },400);
+  }
+}
+function goHome(){window.location.href='dashboard.html';}
+</script>
+</body>
+</html>

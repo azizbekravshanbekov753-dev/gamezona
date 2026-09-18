@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GameZone - Wordle</title>
+  <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:#0a0a1a;color:#fff;font-family:'Rajdhani',sans-serif;min-height:100vh;display:flex;flex-direction:column;}
+    .navbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:rgba(10,10,26,.9);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.08);}
+    .nav-logo{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;background:linear-gradient(135deg,#10b981,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .back-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;padding:8px 16px;border-radius:10px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;}
+    .back-btn:hover{background:rgba(255,255,255,.12);}
+    .coin-display{display:flex;align-items:center;gap:6px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.3);border-radius:20px;padding:6px 14px;font-size:15px;font-weight:700;color:#fbbf24;}
+    .game-wrap{flex:1;display:flex;flex-direction:column;align-items:center;padding:20px 16px;}
+    .game-title{font-family:'Orbitron',sans-serif;font-size:26px;font-weight:900;background:linear-gradient(135deg,#10b981,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;}
+    .game-sub{color:rgba(255,255,255,.4);font-size:13px;margin-bottom:20px;text-align:center;}
+    /* Grid */
+    .grid{display:flex;flex-direction:column;gap:6px;margin-bottom:20px;}
+    .grid-row{display:flex;gap:6px;}
+    .tile{width:56px;height:56px;border:2px solid rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:22px;font-weight:900;text-transform:uppercase;transition:all .3s;user-select:none;}
+    .tile.filled{border-color:rgba(255,255,255,.4);animation:pop .1s ease;}
+    @keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.12)}100%{transform:scale(1)}}
+    .tile.correct{background:#10b981;border-color:#10b981;animation:flip .5s ease;}
+    .tile.present{background:#f59e0b;border-color:#f59e0b;animation:flip .5s ease;}
+    .tile.absent {background:#374151;border-color:#374151;animation:flip .5s ease;}
+    @keyframes flip{0%{transform:rotateX(0)}50%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
+    .tile.shake{animation:shake .5s ease;}
+    @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+    /* Keyboard */
+    .keyboard{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+    .kb-row{display:flex;gap:5px;justify-content:center;}
+    .key{min-width:36px;height:52px;background:rgba(255,255,255,.1);border:none;border-radius:8px;color:#fff;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;padding:0 6px;text-transform:uppercase;}
+    .key:hover{background:rgba(255,255,255,.2);}
+    .key.wide{min-width:60px;font-size:12px;}
+    .key.correct{background:#10b981!important;}
+    .key.present{background:#f59e0b!important;}
+    .key.absent {background:#374151!important;}
+    .status-msg{font-size:16px;font-weight:700;text-align:center;min-height:24px;margin-bottom:12px;color:#fbbf24;}
+    /* Result */
+    .result-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;z-index:200;}
+    .result-overlay.show{display:flex;}
+    .result-box{background:#13132a;border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:40px 36px;text-align:center;max-width:340px;width:90%;animation:bounceIn .4s ease;}
+    @keyframes bounceIn{0%{transform:scale(.7);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+    .result-emoji{font-size:64px;display:block;margin-bottom:12px;}
+    .result-title{font-family:'Orbitron',sans-serif;font-size:20px;font-weight:900;margin-bottom:8px;}
+    .result-word{font-family:'Orbitron',sans-serif;font-size:24px;color:#10b981;margin-bottom:6px;letter-spacing:4px;}
+    .result-sub{color:rgba(255,255,255,.5);font-size:14px;margin-bottom:20px;}
+    .result-coins{color:#fbbf24;font-size:16px;font-weight:700;margin-bottom:20px;}
+    .res-btns{display:flex;gap:10px;justify-content:center;}
+    .res-btn{padding:11px 22px;border:none;border-radius:12px;color:#fff;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:.3s;}
+    .res-play{background:linear-gradient(135deg,#10b981,#059669);}
+    .res-home{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
+  </style>
+</head>
+<body>
+<nav class="navbar">
+  <button class="back-btn" onclick="goHome()">← Orqaga</button>
+  <div class="nav-logo">🟩 Wordle</div>
+  <div class="coin-display">🪙 <span id="nav-coins">0</span></div>
+</nav>
+<div class="game-wrap">
+  <h1 class="game-title">WORDLE</h1>
+  <p class="game-sub">5 harfli so'zni 6 urinishda toping!</p>
+  <div class="status-msg" id="status"></div>
+  <div class="grid" id="grid"></div>
+  <div class="keyboard" id="keyboard"></div>
+</div>
+<div class="result-overlay" id="result-overlay">
+  <div class="result-box">
+    <span class="result-emoji" id="res-emoji">🏆</span>
+    <div class="result-title" id="res-title"></div>
+    <div class="result-word"  id="res-word"></div>
+    <div class="result-sub"   id="res-sub"></div>
+    <div class="result-coins" id="res-coins"></div>
+    <div class="res-btns">
+      <button class="res-btn res-play" onclick="startGame()">🔄 Qayta</button>
+      <button class="res-btn res-home" onclick="goHome()">🏠 Uy</button>
+    </div>
+  </div>
+</div>
+<script src="firebase.js"></script>
+<script src="coins.js"></script>
+<script>
+const WORDS = ['OLMA','ANOR','UZUM','TOSH','SUVI','QUSH','BAXT','YIRT','BOLA','GULL',
+  'KITOB','RADIO','KELIN','KANAL','DERAZA','SABZI','TULKI','BALIQ','ARZON','QALAM',
+  'SAMOVAR','CHOYNAK','QOVOQ','NOKAT','PICHOQ','SHAMOL','BULUT','YOMG\'IR','YERGA','DENGIZ',
+  'TABLE','GRAPE','CHAIR','LIGHT','MUSIC','DANCE','STONE','WATER','FLAME','CLOUD',
+  'BRAIN','SPACE','NIGHT','DREAM','RIVER','HEART','EAGLE','TIGER','SWORD','MAGIC'];
+const VALID = [...WORDS,'APPLE','BRAVE','CRANE','DRIVE','EARTH','FROST','GLOBE','HOUSE',
+  'JUDGE','KNIFE','LEMON','MOUNT','NURSE','OCEAN','PAINT','QUEEN','ROBIN','SMILE',
+  'TRAIN','UNCLE','VOICE','WITCH','XENON','YACHT','ZEBRA','PIZZA','PASTA','BREAD','STORM'];
+
+const ROWS=6, COLS=5;
+let secret='', grid=[], currentRow=0, currentCol=0, gameOver=false, keyStates={};
+
+const KEYBOARD_ROWS = [
+  ['Q','W','E','R','T','Y','U','I','O','P'],
+  ['A','S','D','F','G','H','J','K','L'],
+  ['ENTER','Z','X','C','V','B','N','M','⌫']
+];
+
+window.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('nav-coins').textContent=getCurrentUser()?.coins||0;
+  buildGrid(); buildKeyboard(); startGame();
+  document.addEventListener('keydown', onKeyDown);
+});
+
+function startGame(){
+  secret = WORDS[Math.floor(Math.random()*WORDS.length)].toUpperCase();
+  // ensure 5 letters
+  secret = secret.replace(/[^A-Z]/g,'').slice(0,5);
+  if(secret.length<5) secret='APPLE';
+  grid=Array.from({length:ROWS},()=>Array(COLS).fill(''));
+  currentRow=0; currentCol=0; gameOver=false; keyStates={};
+  document.getElementById('result-overlay').classList.remove('show');
+  document.getElementById('status').textContent='';
+  renderGrid(); resetKeyboard();
+}
+
+function buildGrid(){
+  const g=document.getElementById('grid'); g.innerHTML='';
+  for(let r=0;r<ROWS;r++){
+    const row=document.createElement('div'); row.className='grid-row'; row.id=`row-${r}`;
+    for(let c=0;c<COLS;c++){
+      const t=document.createElement('div'); t.className='tile'; t.id=`t-${r}-${c}`;
+      row.appendChild(t);
+    }
+    g.appendChild(row);
+  }
+}
+
+function buildKeyboard(){
+  const kb=document.getElementById('keyboard'); kb.innerHTML='';
+  KEYBOARD_ROWS.forEach(row=>{
+    const div=document.createElement('div'); div.className='kb-row';
+    row.forEach(k=>{
+      const btn=document.createElement('button');
+      btn.className='key'+(k.length>1?' wide':'');
+      btn.textContent=k; btn.id=`key-${k}`;
+      btn.onclick=()=>handleKey(k);
+      div.appendChild(btn);
+    });
+    kb.appendChild(div);
+  });
+}
+
+function resetKeyboard(){
+  document.querySelectorAll('.key').forEach(k=>{k.className='key'+(k.textContent.length>1?' wide':'');});
+}
+
+function renderGrid(){
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const t=document.getElementById(`t-${r}-${c}`);
+    t.textContent=grid[r][c];
+    t.className='tile'+(grid[r][c]?' filled':'');
+  }
+}
+
+function onKeyDown(e){
+  if(gameOver) return;
+  if(e.key==='Enter') handleKey('ENTER');
+  else if(e.key==='Backspace') handleKey('⌫');
+  else if(/^[a-zA-Z]$/.test(e.key)) handleKey(e.key.toUpperCase());
+}
+
+function handleKey(k){
+  if(gameOver) return;
+  if(k==='⌫'){
+    if(currentCol>0){ currentCol--; grid[currentRow][currentCol]=''; updateTile(currentRow,currentCol,'',''); }
+  } else if(k==='ENTER'){
+    submitGuess();
+  } else if(currentCol<COLS){
+    grid[currentRow][currentCol]=k;
+    const t=document.getElementById(`t-${currentRow}-${currentCol}`);
+    t.textContent=k; t.className='tile filled';
+    currentCol++;
+  }
+}
+
+function updateTile(r,c,letter,cls){
+  const t=document.getElementById(`t-${r}-${c}`);
+  t.textContent=letter; t.className='tile'+(letter?' filled':'')+(cls?' '+cls:'');
+}
+
+function submitGuess(){
+  if(currentCol<COLS){ shakeRow(currentRow); showStatus('5 harf kiriting!'); return; }
+  const guess=grid[currentRow].join('');
+  // evaluate
+  const result=evaluateGuess(guess,secret);
+  // animate with delay
+  result.forEach((cls,i)=>{
+    setTimeout(()=>{
+      const t=document.getElementById(`t-${currentRow}-${i}`);
+      t.className=`tile ${cls}`;
+      // update key
+      const key=document.getElementById(`key-${guess[i]}`);
+      if(key){
+        if(cls==='correct') key.className='key correct';
+        else if(cls==='present'&&!key.classList.contains('correct')) key.className='key present';
+        else if(cls==='absent'&&!key.classList.contains('correct')&&!key.classList.contains('present')) key.className='key absent';
+      }
+    }, i*150);
+  });
+
+  setTimeout(()=>{
+    if(guess===secret){
+      gameOver=true;
+      const pts=reward(currentRow);
+      addCoins(pts); addResult(true);
+      document.getElementById('nav-coins').textContent=getCurrentUser()?.coins||0;
+      showResult('🏆','YUTDINGIZ!',secret,`${currentRow+1}-urinishda topdingiz!`,`+🪙 ${pts} tanga!`);
+    } else {
+      currentRow++;
+      currentCol=0;
+      if(currentRow>=ROWS){
+        gameOver=true; addResult(false);
+        showResult('😢','YUTQAZDINGIZ',secret,'So\'z topilmadi.','');
+      }
+    }
+  }, COLS*150+300);
+}
+
+function evaluateGuess(guess,secret){
+  const res=Array(COLS).fill('absent');
+  const sArr=[...secret], gArr=[...guess];
+  // correct pass
+  for(let i=0;i<COLS;i++) if(gArr[i]===sArr[i]){res[i]='correct';sArr[i]=null;gArr[i]=null;}
+  // present pass
+  for(let i=0;i<COLS;i++){
+    if(!gArr[i]) continue;
+    const j=sArr.indexOf(gArr[i]);
+    if(j!==-1){res[i]='present';sArr[j]=null;}
+  }
+  return res;
+}
+
+function reward(row){ return [100,80,60,50,40,30][row]||30; }
+function shakeRow(r){ document.getElementById(`row-${r}`).classList.add('shake'); setTimeout(()=>document.getElementById(`row-${r}`)?.classList.remove('shake'),500); }
+function showStatus(msg){ const s=document.getElementById('status'); s.textContent=msg; setTimeout(()=>s.textContent='',2000); }
+function showResult(emoji,title,word,sub,coins){
+  setTimeout(()=>{
+    document.getElementById('res-emoji').textContent=emoji;
+    document.getElementById('res-title').textContent=title;
+    document.getElementById('res-word').textContent=word;
+    document.getElementById('res-sub').textContent=sub;
+    document.getElementById('res-coins').textContent=coins;
+    document.getElementById('result-overlay').classList.add('show');
+  },500);
+}
+function goHome(){window.location.href='dashboard.html';}
+</script>
+</body>
+</html>
