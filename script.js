@@ -411,16 +411,18 @@ function resetK() {
   kStep(1);
   updateKPrice();
 
-  // 3D Three.js modelni ishga tushirish
+  // Canvas 3D tortni ishga tushirish
   setTimeout(() => {
     if (typeof initCake3D === 'function') {
-      C3D.color = 0xfde88a;
-      C3D.shapeType = 'round';
-      C3D.topEmoji = '';
-      C3D.candles = 0;
-      C3D.rotating = true;
+      CK.color    = "#fde88a";
+      CK.layers   = 3;
+      CK.topEmoji = '';
+      CK.candles  = 0;
+      CK.rotating = true;
       initCake3D();
     }
+    applyPreview();
+  }, 60);
     applyPreview();
   }, 60);
 }
@@ -555,9 +557,9 @@ function updateKPrice() {
 
 function applyPreview() {
   if (typeof updateCake3DColor === 'function') {
-    updateCake3DColor(KS.cakeColor);
-    updateCake3DShape(KS.shapeType);
-    updateCake3DTopping(KS.topEmoji || '');
+    updateCake3DColor(KS.cakeColor);          // hex string, e.g. "#fde88a"
+    updateCake3DShape(KS.shapeType);           // "round", "sm", "bento", "lg", "heart"
+    updateCake3DTopping(KS.topEmoji || '');   // emoji string yoki ''
   }
   const shapeLbl = document.getElementById("k3d-shape-lbl");
   const topLbl   = document.getElementById("k3d-top-lbl");
