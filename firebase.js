@@ -63,7 +63,16 @@ async function enterRoom(gameType, code, myKey, onReady) {
         done(r.player1, r.player2);
       }
     })
-    .subscribe();
+    .subscribe(async (status) => {
+      // Subscribe bo'lgandan keyin xonani qayta tekshir
+      // (guest subscribe dan oldin kirgan bo'lishi mumkin)
+      if (status === 'SUBSCRIBED') {
+        const { data: current } = await sb.from('rooms').select('*').eq('id', roomId).single();
+        if (current && current.status === 'playing' && current.player2) {
+          done(current.player1, current.player2);
+        }
+      }
+    });
 
   timer = setTimeout(async () => {
     if (!settled) {
