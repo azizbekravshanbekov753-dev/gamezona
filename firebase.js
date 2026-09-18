@@ -1,7 +1,17 @@
 // ═══════════════════════════════════════════════
-//  MULTIPLAYER — PeerJS (Browser-to-Browser)
-//  GitHub Pages da to'liq ishlaydi!
+//  SUPABASE — Real-time Multiplayer
 // ═══════════════════════════════════════════════
+const SUPABASE_URL = 'https://xoyepmshnnmgvsqkmbfa.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_c2LUkQ0QeTxCIqzHmFmYtA_lf_5Rm5x';
+
+let _sb = null;
+
+function getSB() {
+  if (_sb) return _sb;
+  if (typeof supabase === 'undefined') { console.error('Supabase SDK yuklanmagan'); return null; }
+  _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  return _sb;
+}
 
 // ═══════════════════════════════════════════════
 //  USER — localStorage
@@ -12,149 +22,154 @@ function getCurrentKey()  { return localStorage.getItem('gz_current_user'); }
 function getCurrentUser() { const k = getCurrentKey(); return k ? getUsers()[k] : null; }
 
 // ═══════════════════════════════════════════════
-//  ROOM SYSTEM — PeerJS asosida
-//
-//  Qanday ishlaydi:
-//  1. Har ikki o'yinchi "gz-{game}-{code}" ID bilan Peer yaratadi
-//  2. Birinchi kirgan = HOST (ID = gz-{game}-{code}-host)
-//  3. Ikkinchi kirgan = GUEST, hostga ulanadi
-//  4. Ular P2P orqali o'ynaydi
+//  ROOM SYSTEM — Supabase Realtime
 // ═══════════════════════════════════════════════
+async function enterRoom(gameType, code, myKey, onReady) {
+  const sb = getSB();
+  if (!sb) { onReady(null, null); return () => {}; }
 
-let _peer = null;
-let _conn = null;
-let _stateCallback = null;
-
-function makePeerId(gameType, code, role) {
-  // Faqat harf va raqamdan iborat bo'lishi kerak
-  const clean = (gameType + code).replace(/[^a-zA-Z0-9]/g, '');
-  return `gz${clean}${role}`;
-}
-
-function enterRoom(gameType, code, myKey, onReady) {
-  const hostId  = makePeerId(gameType, code, 'h');
-  const guestId = makePeerId(gameType, code, 'g') + Date.now().toString().slice(-4);
-
+  const roomId = `${gameType}-${code}`;
   let settled = false;
-  let timeoutId;
-  let tryGuestInterval;
+  let channel = null;
+  let timeoutId = null;
 
   function finish(p1, p2) {
     if (settled) return;
     settled = true;
     clearTimeout(timeoutId);
-    clearInterval(tryGuestInterval);
     onReady(p1, p2);
   }
 
-  // Birinchi host sifatida urinib ko'r
-  const hostPeer = new Peer(hostId, { debug: 0 });
+  // 1. Xona bormi tekshir
+  const { data: existing } = await sb
+    .from('rooms')
+    .select('*')
+    .eq('id', roomId)
+    .single();
 
-  hostPeer.on('open', () => {
-    // Host bo'ldik — guest kutamiz
-    _peer = hostPeer;
+  if (existing && existing.status === 'waiting' && existing.player1 !== myKey) {
+    // Guest sifatida kir
+    await sb.from('rooms').update({
+      player2: myKey,
+      status: 'playing'
+    }).eq('id', roomId);
 
-    hostPeer.on('connection', (conn) => {
-      _conn = conn;
-      conn.on('open', () => {
-        conn.send({ type: 'ready', p1: myKey, p2: conn.metadata });
-        finish(myKey, conn.metadata);
-      });
-      conn.on('data', (data) => {
-        if (_stateCallback) _stateCallback(data);
-      });
+    finish(existing.player1, myKey);
+    return () => {};
+  }
+
+  if (!existing) {
+    // Host sifatida xona ochish
+    await sb.from('rooms').insert({
+      id: roomId,
+      game: gameType,
+      player1: myKey,
+      player2: null,
+      status: 'waiting',
+      state: {}
     });
-  });
+  }
 
-  hostPeer.on('error', (err) => {
-    // Host ID band — guest sifatida ulanamiz
-    hostPeer.destroy();
-
-    const guestPeer = new Peer(guestId, { debug: 0 });
-    _peer = guestPeer;
-
-    guestPeer.on('open', () => {
-      function tryConnect() {
-        if (settled) return;
-        const conn = guestPeer.connect(hostId, { metadata: myKey, reliable: true });
-        conn.on('open', () => {
-          _conn = conn;
-          conn.on('data', (data) => {
-            if (data.type === 'ready') {
-              finish(data.p1, data.p2);
-            } else if (_stateCallback) {
-              _stateCallback(data);
-            }
-          });
-        });
-        conn.on('error', () => {});
+  // Real-time: o'zgarishni kuzat
+  channel = sb
+    .channel(`room-${roomId}`)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'rooms',
+      filter: `id=eq.${roomId}`
+    }, (payload) => {
+      const room = payload.new;
+      if (room.status === 'playing' && room.player2) {
+        finish(room.player1, room.player2);
       }
+    })
+    .subscribe();
 
-      tryConnect();
-      tryGuestInterval = setInterval(tryConnect, 2000);
-    });
-
-    guestPeer.on('error', () => {});
-  });
-
-  timeoutId = setTimeout(() => finish(null, null), 120000);
+  // 2 daqiqa timeout
+  timeoutId = setTimeout(async () => {
+    if (!settled) {
+      settled = true;
+      await sb.from('rooms').delete().eq('id', roomId);
+      finish(null, null);
+    }
+  }, 120000);
 
   return () => {
     settled = true;
     clearTimeout(timeoutId);
-    clearInterval(tryGuestInterval);
-    try { if (_conn) _conn.close(); } catch(e) {}
-    try { if (_peer) _peer.destroy(); } catch(e) {}
-    _peer = null; _conn = null;
+    if (channel) sb.removeChannel(channel);
   };
 }
 
 // ═══════════════════════════════════════════════
-//  GAME STATE — P2P yuborish
+//  GAME STATE — Real-time yuborish
 // ═══════════════════════════════════════════════
 function sendState(gameType, code, stateObj) {
-  if (_conn && _conn.open) {
-    try { _conn.send({ ...stateObj, _type: 'state' }); } catch(e) {}
-  }
+  const sb = getSB();
+  if (!sb) return;
+  const roomId = `${gameType}-${code}`;
+  sb.from('rooms').update({
+    state: { ...stateObj, _from: getCurrentKey(), ts: Date.now() },
+    updated_at: new Date().toISOString()
+  }).eq('id', roomId);
 }
 
 function listenState(gameType, code, callback) {
-  _stateCallback = (data) => {
-    if (data && data._type === 'state') callback(data);
-  };
-  return () => { _stateCallback = null; };
+  const sb = getSB();
+  if (!sb) return () => {};
+  const myKey = getCurrentKey();
+  const roomId = `${gameType}-${code}`;
+
+  const channel = sb
+    .channel(`state-${roomId}-${Date.now()}`)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'rooms',
+      filter: `id=eq.${roomId}`
+    }, (payload) => {
+      const state = payload.new.state;
+      if (state && state._from !== myKey) {
+        callback(state);
+      }
+    })
+    .subscribe();
+
+  return () => { if (sb) sb.removeChannel(channel); };
 }
 
 function sendGameOver(gameType, code, winner) {
-  if (_conn && _conn.open) {
-    try { _conn.send({ _type: 'over', winner }); } catch(e) {}
-  }
+  const sb = getSB();
+  if (!sb) return;
+  sb.from('rooms').update({ status: 'finished', state: { winner } })
+    .eq('id', `${gameType}-${code}`);
 }
 
 // ═══════════════════════════════════════════════
 //  QUEUE — Tasodifiy raqib
-//  Shared room code ishlatamiz
 // ═══════════════════════════════════════════════
-function findRandom(gameType, myKey, onMatch) {
-  // Tasodifiy kod o'rniga — umumiy "random" xonasiga ulanamiz
-  const code = 'rand0m';
+async function findRandom(gameType, myKey, onMatch) {
+  const sb = getSB();
+  if (!sb) { onMatch(null, null, null); return () => {}; }
+
+  const code = 'random';
   let settled = false;
 
-  const cancel = enterRoom(gameType, code, myKey, (p1, p2) => {
+  const cancel = await enterRoom(gameType, code, myKey, (p1, p2) => {
     if (settled) return;
     settled = true;
     if (!p1) { onMatch(null, null, null); return; }
     onMatch(p1, p2, code);
   });
 
-  return () => { settled = true; cancel(); };
+  return () => { settled = true; if (cancel) cancel(); };
 }
 
 // ═══════════════════════════════════════════════
-//  INVITE — Do'st chaqirish (Ably orqali xabar)
+//  INVITE — Do'st chaqirish
 // ═══════════════════════════════════════════════
 function sendInvite(toKey, fromKey, gameType, code) {
-  // localStorage orqali invite (bir xil qurilmada) + Ably
   const invKey = `gz_inv_${toKey}`;
   const invites = JSON.parse(localStorage.getItem(invKey) || '[]');
   invites.push({ from: fromKey, gameType, code, ts: Date.now() });
@@ -200,7 +215,9 @@ function refreshCoinDisplay() {
 }
 
 async function getLeaderboard(limit = 10) {
-  return Object.values(getUsers()).sort((a,b)=>(b.wins||0)-(a.wins||0)).slice(0,limit);
+  return Object.values(getUsers())
+    .sort((a,b) => (b.wins||0) - (a.wins||0))
+    .slice(0, limit);
 }
 
 // ═══════════════════════════════════════════════
