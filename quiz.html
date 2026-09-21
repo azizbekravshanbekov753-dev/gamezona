@@ -4,9 +4,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>GameZone - Quiz Battle</title>
-  <!-- Ably SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     body{background:#0a0a1a;color:#fff;font-family:'Rajdhani',sans-serif;min-height:100vh;display:flex;flex-direction:column;}
@@ -27,12 +26,12 @@
 
     .scoreboard{display:flex;align-items:center;gap:20px;margin-bottom:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:14px 24px;width:100%;max-width:560px;}
     .score-card{flex:1;text-align:center;}
-    .score-card.active .score-name{color:#34d399;}
     .score-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;margin:0 auto 6px;transition:.3s;}
     .score-card.active .score-avatar{box-shadow:0 0 0 3px #10b981,0 0 20px rgba(16,185,129,.4);}
     .score-name{font-size:14px;font-weight:700;margin-bottom:4px;color:rgba(255,255,255,.7);}
+    .score-card.active .score-name{color:#34d399;}
     .score-pts{font-family:'Orbitron',sans-serif;font-size:26px;font-weight:900;}
-    .score-divider{font-family:'Orbitron',sans-serif;font-size:14px;color:rgba(255,255,255,.3);}
+    .score-divider{font-family:'Orbitron',sans-serif;font-size:14px;color:rgba(255,255,255,.3);padding:0 8px;}
 
     .progress-wrap{width:100%;max-width:560px;margin-bottom:12px;}
     .progress-top{display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,.4);margin-bottom:6px;}
@@ -56,17 +55,17 @@
     .ans-btn.correct{background:rgba(16,185,129,.25)!important;border-color:#10b981!important;box-shadow:0 0 20px rgba(16,185,129,.3);}
     .ans-btn.wrong{background:rgba(239,68,68,.2)!important;border-color:#ef4444!important;}
     .ans-btn.locked{cursor:default;}
-    .ans-btn.opponent-answered{position:relative;}
-    .ans-btn.opponent-answered::after{content:'рџ‘¤';position:absolute;top:-8px;right:-6px;font-size:14px;}
+    .ans-btn.opp-pick{outline:3px solid #fbbf24;outline-offset:2px;}
 
     .feedback{font-size:15px;font-weight:700;text-align:center;min-height:22px;margin-bottom:4px;}
-    .opponent-status{font-size:13px;color:rgba(255,255,255,.4);text-align:center;min-height:20px;margin-bottom:8px;}
+    .opp-status{font-size:13px;color:rgba(255,255,255,.4);text-align:center;min-height:20px;margin-bottom:8px;}
 
     .controls{display:flex;gap:12px;}
     .ctrl-btn{padding:11px 26px;border:none;border-radius:12px;color:#fff;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:.3s;letter-spacing:1px;}
     .btn-play{background:linear-gradient(135deg,#10b981,#059669);}
     .btn-play:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,.4);}
     .btn-back{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
+    .btn-back:hover{background:rgba(255,255,255,.12);}
 
     .wait-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:150;}
     .wait-box{background:#13132a;border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:44px 36px;text-align:center;max-width:320px;width:90%;}
@@ -81,7 +80,7 @@
     .result-overlay.show{display:flex;}
     .result-box{background:#13132a;border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:44px 36px;text-align:center;max-width:380px;width:92%;animation:bounceIn .4s ease;}
     @keyframes bounceIn{0%{transform:scale(.7);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
-    .result-emoji{font-size:68px;display:block;margin-bottom:14px;}
+    .result-icon{font-size:68px;display:block;margin-bottom:14px;line-height:1;}
     .result-title{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:900;margin-bottom:10px;}
     .result-scores{display:flex;gap:24px;justify-content:center;margin-bottom:12px;}
     .rs-card .rs-name{font-size:13px;color:rgba(255,255,255,.5);margin-bottom:4px;}
@@ -93,90 +92,106 @@
     .res-play{background:linear-gradient(135deg,#10b981,#059669);}
     .res-play:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(16,185,129,.4);}
     .res-home{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
+    .res-home:hover{background:rgba(255,255,255,.12);}
+
     @media(max-width:480px){.answers{grid-template-columns:1fr;}}
   </style>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
 </head>
 <body>
+
 <nav class="navbar">
-  <button class="back-btn" onclick="goHome()">в†ђ Orqaga</button>
-  <div class="nav-logo">рџ§  Quiz Battle</div>
-  <div class="coin-display">рџЄ™ <span id="nav-coins">0</span></div>
+  <button class="back-btn" onclick="goHome()">&#8592; Orqaga</button>
+  <div class="nav-logo">&#9670; Quiz Battle</div>
+  <div class="coin-display">&#9679; <span id="nav-coins">0</span></div>
 </nav>
 
 <div class="game-wrap">
   <h1 class="game-title">Quiz Battle</h1>
-  <div class="conn-badge online" id="conn-badge"><span class="conn-dot"></span><span id="conn-text">Ulangan</span></div>
+  <div class="conn-badge online" id="conn-badge">
+    <span class="conn-dot"></span>
+    <span id="conn-text">Ulangan</span>
+  </div>
 
   <div class="scoreboard">
     <div class="score-card active" id="sc1">
       <div class="score-avatar" id="sc1-av">?</div>
-      <div class="score-name" id="sc1-name">O'yinchi 1</div>
-      <div class="score-pts" id="sc1-pts">0</div>
+      <div class="score-name"   id="sc1-name">O&#39;yinchi 1</div>
+      <div class="score-pts"   id="sc1-pts">0</div>
     </div>
     <div class="score-divider">VS</div>
     <div class="score-card" id="sc2">
       <div class="score-avatar" id="sc2-av">?</div>
-      <div class="score-name" id="sc2-name">O'yinchi 2</div>
-      <div class="score-pts" id="sc2-pts">0</div>
+      <div class="score-name"   id="sc2-name">O&#39;yinchi 2</div>
+      <div class="score-pts"   id="sc2-pts">0</div>
     </div>
   </div>
 
   <div class="progress-wrap">
     <div class="progress-top">
       <span id="q-counter">Savol 1 / 10</span>
-      <span id="q-turn">Navbat: вЂ”</span>
+      <span id="q-mode">Ikkalasi javob beradi</span>
     </div>
-    <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="prog-fill" style="width:0%"></div>
+    </div>
   </div>
 
   <div class="timer-ring">
     <svg width="60" height="60" viewBox="0 0 64 64">
       <circle class="timer-bg" cx="32" cy="32" r="28"/>
-      <circle class="timer-fg" id="timer-arc" cx="32" cy="32" r="28" stroke-dasharray="175.9" stroke-dashoffset="0"/>
+      <circle class="timer-fg" id="timer-arc" cx="32" cy="32" r="28"
+              stroke-dasharray="175.9" stroke-dashoffset="0"/>
     </svg>
     <div class="timer-text" id="timer-text">15</div>
   </div>
 
   <div class="question-card">
     <div class="q-category" id="q-cat">Kategoriya</div>
-    <div class="q-text"    id="q-text">Savol yuklanmoqda...</div>
+    <div class="q-text"     id="q-text">Savol yuklanmoqda...</div>
   </div>
 
   <div class="answers" id="answers"></div>
-  <div class="feedback" id="feedback"></div>
-  <div class="opponent-status" id="opp-status"></div>
+  <div class="feedback"   id="feedback"></div>
+  <div class="opp-status" id="opp-status"></div>
 
   <div class="controls">
-    <button class="ctrl-btn btn-play" onclick="restartGame()">рџ”„ Qayta O'yna</button>
-    <button class="ctrl-btn btn-back" onclick="goHome()">рџЏ  Bosh Sahifa</button>
+    <button class="ctrl-btn btn-play" onclick="restartGame()">&#8635; Qayta O&#39;yna</button>
+    <button class="ctrl-btn btn-back" onclick="goHome()">&#8962; Bosh Sahifa</button>
   </div>
 </div>
 
+<!-- Waiting overlay: only shown to host -->
 <div class="wait-overlay" id="wait-overlay" style="display:none">
   <div class="wait-box">
     <div class="spinner"></div>
     <div class="wait-title">Raqib kutilmoqda...</div>
     <div class="wait-sub">Xona kodi:</div>
-    <div class="wait-code" id="wait-code">вЂ”</div>
+    <div class="wait-code" id="wait-code">&#8212;</div>
     <div class="wait-sub">Raqibingizga shu kodni yuboring</div>
-    <button class="cancel-btn" onclick="goHome()">вњ• Bekor qilish</button>
+    <button class="cancel-btn" onclick="goHome()">&#10006; Bekor qilish</button>
   </div>
 </div>
 
+<!-- Result overlay -->
 <div class="result-overlay" id="result-overlay">
   <div class="result-box">
-    <span class="result-emoji" id="res-emoji">рџЏ†</span>
+    <span class="result-icon" id="res-icon">&#9733;</span>
     <div class="result-title" id="res-title"></div>
     <div class="result-scores">
-      <div class="rs-card"><div class="rs-name" id="rs-n1"></div><div class="rs-score" id="rs-s1">0</div></div>
-      <div class="rs-card"><div class="rs-name" id="rs-n2"></div><div class="rs-score" id="rs-s2">0</div></div>
+      <div class="rs-card">
+        <div class="rs-name"  id="rs-n1"></div>
+        <div class="rs-score" id="rs-s1">0</div>
+      </div>
+      <div class="rs-card">
+        <div class="rs-name"  id="rs-n2"></div>
+        <div class="rs-score" id="rs-s2">0</div>
+      </div>
     </div>
     <div class="result-sub"   id="res-sub"></div>
     <div class="result-coins" id="res-coins"></div>
     <div class="result-btns">
-      <button class="res-btn res-play" onclick="restartGame()">рџ”„ Qayta</button>
-      <button class="res-btn res-home" onclick="goHome()">рџЏ  Uy</button>
+      <button class="res-btn res-play" onclick="restartGame()">&#8635; Qayta</button>
+      <button class="res-btn res-home" onclick="goHome()">&#8962; Uy</button>
     </div>
   </div>
 </div>
@@ -184,343 +199,396 @@
 <script src="firebase.js"></script>
 <script src="coins.js"></script>
 <script>
-// в”Ђв”Ђ QUESTIONS в”Ђв”Ђ
-const QUESTIONS = [
-  {cat:'рџЊЌ Geografiya',q:"O'zbekistonning poytaxti?",opts:["Samarqand","Toshkent","Buxoro","Namangan"],ans:1},
-  {cat:'рџЊЌ Geografiya',q:"Dunyo bo'yicha eng baland tog'?",opts:["K2","Kangchenjunga","Everest","Lhotse"],ans:2},
-  {cat:'рџЊЌ Geografiya',q:"Eng katta okean?",opts:["Atlantika","Hind","Tinch","Arktika"],ans:2},
-  {cat:'рџЊЌ Geografiya',q:"Braziliyaning poytaxti?",opts:["Rio de Janeiro","San-Paulo","Braziliya","Salvador"],ans:2},
-  {cat:'рџЊЌ Geografiya',q:"Dunyodagi eng katta davlat?",opts:["Kanada","Xitoy","AQSh","Rossiya"],ans:3},
-  {cat:'рџЊЌ Geografiya',q:"Nil daryosi qaysi qit'ada?",opts:["Osiyo","Afrika","Amerika","Yevropa"],ans:1},
-  {cat:'рџЊЌ Geografiya',q:"Yaponiyaning poytaxti?",opts:["Osaka","Kyoto","Tokyo","Hiroshima"],ans:2},
-  {cat:'рџ”¬ Ilm-fan',q:"Suvning kimyoviy formulasi?",opts:["CO2","H2O","O2","NaCl"],ans:1},
-  {cat:'рџ”¬ Ilm-fan',q:"Yorug'lik tezligi taxminan?",opts:["100,000 km/s","200,000 km/s","300,000 km/s","400,000 km/s"],ans:2},
-  {cat:'рџ”¬ Ilm-fan',q:"DNA qanday shaklga ega?",opts:["Spiral","Ikki spiral","To'g'ri chiziq","Halqa"],ans:1},
-  {cat:'рџ”¬ Ilm-fan',q:"Davriy jadvalda nechta element?",opts:["108","112","118","120"],ans:2},
-  {cat:'рџ”¬ Ilm-fan',q:"Yer Quyosh atrofida qancha vaqtda aylanadi?",opts:["24 soat","30 kun","365 kun","100 yil"],ans:2},
-  {cat:'рџ”ў Matematika',q:"в€љ144 = ?",opts:["10","11","12","13"],ans:2},
-  {cat:'рџ”ў Matematika',q:"7 Г— 8 = ?",opts:["54","56","58","60"],ans:1},
-  {cat:'рџ”ў Matematika',q:"2^10 = ?",opts:["512","1000","1024","2048"],ans:2},
-  {cat:'рџ”ў Matematika',q:"Uchburchak ichki burchaklari yig'indisi?",opts:["90В°","180В°","270В°","360В°"],ans:1},
-  {cat:'рџ“њ Tarix',q:"Amir Temur qachon tug'ilgan?",opts:["1320","1336","1350","1370"],ans:1},
-  {cat:'рџ“њ Tarix',q:"Birinchi jahon urushi qachon boshlangan?",opts:["1912","1913","1914","1915"],ans:2},
-  {cat:'рџ“њ Tarix',q:"O'zbekiston mustaqilligini qachon e'lon qildi?",opts:["1989","1990","1991","1992"],ans:2},
-  {cat:'рџ’» Texnologiya',q:"HTML nima uchun ishlatiladi?",opts:["Dizayn","Dasturlash","Veb sahifa tuzilishi","Ma'lumotlar bazasi"],ans:2},
-  {cat:'рџ’» Texnologiya',q:"CPU nima?",opts:["Grafika kartasi","Markaziy protsessor","Xotira qurilmasi","Tarmoq kartasi"],ans:1},
-  {cat:'рџ’» Texnologiya',q:"WWW nima degani?",opts:["World Wide Web","Wide World Web","World Web Wide","Web World Wide"],ans:0},
-  {cat:'рџ’» Texnologiya',q:"1 GB = ? MB",opts:["100 MB","512 MB","1000 MB","1024 MB"],ans:3},
-  {cat:'вљЅ Sport',q:"Futbol jamosida nechta o'yinchi?",opts:["9","10","11","12"],ans:2},
-  {cat:'вљЅ Sport',q:"Olimpiada o'yinlari necha yilda bir marta?",opts:["2","3","4","5"],ans:2},
-  {cat:'рџЋµ Musiqa',q:"Pianinoda nechta tugma bor?",opts:["72","76","88","96"],ans:2},
-  {cat:'рџЋµ Musiqa',q:"Gitarada nechta tor bor?",opts:["4","5","6","7"],ans:2},
-  {cat:'рџЊї Tabiat',q:"Qaysi hayvon eng tez yuguradi?",opts:["Sher","Gepard","Ot","Kenguru"],ans:1},
-  {cat:'рџЊї Tabiat',q:"Eng katta hayvon?",opts:["Fil","Ko'k kit","Zubr","Karkidon"],ans:1},
-  {cat:'рџЊї Tabiat',q:"Baliqlar nafas olish uchun nima ishlatadi?",opts:["O'pka","Jabralar","Teri","Burun"],ans:1},
-  {cat:'рџЋЇ Umumiy',q:"1 yilda nechta kun bor (oddiy yil)?",opts:["364","365","366","367"],ans:1},
-  {cat:'рџЋЇ Umumiy',q:"Telefon ixtiro qilgan kim?",opts:["Thomas Edison","Nikola Tesla","Alexander Bell","Guglielmo Marconi"],ans:2},
-  {cat:'рџЋЇ Umumiy',q:"Quyosh tizimida nechta sayyora?",opts:["7","8","9","10"],ans:1},
-  {cat:'рџЋЇ Umumiy',q:"Kamalakda nechta rang?",opts:["5","6","7","8"],ans:2},
-  {cat:'рџЋЇ Umumiy',q:"Insonning odatdagi tana harorati?",opts:["35В°C","36В°C","37В°C","38В°C"],ans:2},
-  {cat:'рџЋЇ Umumiy',q:"Eng ko'p gapiriluvchi til?",opts:["Ingliz","Ispan","Xitoy (mandarin)","Arab"],ans:2},
-  {cat:'рџЋЇ Umumiy',q:"Qaysi vitamin quyosh nuridan hosil bo'ladi?",opts:["A","B12","C","D"],ans:3},
-  {cat:'рџЋЇ Umumiy',q:"Shakespeare qaysi mamlakatdan?",opts:["Fransiya","Germaniya","Angliya","Italiya"],ans:2},
-  {cat:'рџ”¬ Ilm-fan',q:"Eng yengil element?",opts:["Geliy","Litiy","Vodorod","Berilliy"],ans:2},
-  {cat:'рџ”ў Matematika',q:"0.5 kasr вЂ” oddiy kasr sifatida?",opts:["1/3","1/4","1/2","2/3"],ans:2},
-  {cat:'рџ”ў Matematika',q:"Doira yuzi formulasi?",opts:["2ПЂr","ПЂrВІ","ПЂd","2ПЂrВІ"],ans:1},
-  {cat:'рџЊЌ Geografiya',q:"Buyuk Ipak yo'li qayerdan qayerga?",opts:["Xitoydan Yevropaga","Hindistondan Afrikaga","Rossiyadan Avstriyaga","Arabistondan Xitoyga"],ans:0},
-  {cat:'рџ’» Texnologiya',q:"Python qanday til?",opts:["Kompilyatsiya qilinuvchi","Interpretatsiya qilinuvchi","Assembler","Mashina tili"],ans:1},
-  {cat:'вљЅ Sport',q:"Tennis kortida yakka o'yinda nechta o'yinchi?",opts:["1","2","3","4"],ans:1},
-  {cat:'рџЊї Tabiat',q:"Fotosintez qaysi qismida sodir bo'ladi?",opts:["Ildiz","Poya","Barg","Gul"],ans:2},
-  {cat:'рџЋЇ Umumiy',q:"1 daqiqada necha sekund?",opts:["30","60","90","120"],ans:1},
-  {cat:'рџ”¬ Ilm-fan',q:"Atom yadrosi nimadan iborat?",opts:["Elektron va proton","Proton va neytron","Neytron va elektron","Faqat proton"],ans:1},
-  {cat:'рџ“њ Tarix',q:"Buyuk Ipak yo'li qachon faol bo'lgan?",opts:["100 BCE вЂ” 1400 CE","1000 BCE вЂ” 500 CE","500 CE вЂ” 1800 CE","200 CE вЂ” 900 CE"],ans:0},
-  {cat:'рџ’» Texnologiya',q:"Birinchi kompyuter virusi qachon yaratilgan?",opts:["1971","1981","1991","2001"],ans:0},
-  {cat:'рџЋЇ Umumiy',q:"Dunyoda nechta mamlakat bor?",opts:["185","193","201","210"],ans:1},
+// ── QUESTIONS (50 ta) ──
+var QUESTIONS = [
+  {cat:'Geografiya', q:"O'zbekistonning poytaxti?",             opts:["Samarqand","Toshkent","Buxoro","Namangan"],            ans:1},
+  {cat:'Geografiya', q:"Dunyo bo'yicha eng baland tog'?",       opts:["K2","Kangchenjunga","Everest","Lhotse"],               ans:2},
+  {cat:'Geografiya', q:"Eng katta okean?",                      opts:["Atlantika","Hind","Tinch","Arktika"],                  ans:2},
+  {cat:'Geografiya', q:"Braziliyaning poytaxti?",               opts:["Rio de Janeiro","San-Paulo","Braziliya","Salvador"],   ans:2},
+  {cat:'Geografiya', q:"Dunyodagi eng katta davlat?",           opts:["Kanada","Xitoy","AQSh","Rossiya"],                    ans:3},
+  {cat:'Geografiya', q:"Nil daryosi qaysi qit'ada?",            opts:["Osiyo","Afrika","Amerika","Yevropa"],                  ans:1},
+  {cat:'Geografiya', q:"Yaponiyaning poytaxti?",                opts:["Osaka","Kyoto","Tokyo","Hiroshima"],                   ans:2},
+  {cat:'Geografiya', q:"Buyuk Ipak yo'li qayerdan qayerga?",    opts:["Xitoydan Yevropaga","Hindistondan Afrikaga","Rossiyadan Avstriyaga","Arabistondan Xitoyga"], ans:0},
+  {cat:'Ilm-fan',    q:"Suvning kimyoviy formulasi?",           opts:["CO2","H2O","O2","NaCl"],                              ans:1},
+  {cat:'Ilm-fan',    q:"Yorug'lik tezligi taxminan?",           opts:["100,000 km/s","200,000 km/s","300,000 km/s","400,000 km/s"], ans:2},
+  {cat:'Ilm-fan',    q:"DNA qanday shaklga ega?",               opts:["Spiral","Ikki spiral","To'g'ri chiziq","Halqa"],       ans:1},
+  {cat:'Ilm-fan',    q:"Davriy jadvalda nechta element?",       opts:["108","112","118","120"],                              ans:2},
+  {cat:'Ilm-fan',    q:"Yer Quyosh atrofida qancha vaqtda aylanadi?", opts:["24 soat","30 kun","365 kun","100 yil"],         ans:2},
+  {cat:'Ilm-fan',    q:"Eng yengil element?",                   opts:["Geliy","Litiy","Vodorod","Berilliy"],                  ans:2},
+  {cat:'Ilm-fan',    q:"Atom yadrosi nimadan iborat?",          opts:["Elektron va proton","Proton va neytron","Neytron va elektron","Faqat proton"], ans:1},
+  {cat:'Matematika', q:"Kvadrat ildiz 144 = ?",                  opts:["10","11","12","13"],                                  ans:2},
+  {cat:'Matematika', q:"7 x 8 = ?",                             opts:["54","56","58","60"],                                  ans:1},
+  {cat:'Matematika', q:"2 daraja 10 = ?",                       opts:["512","1000","1024","2048"],                           ans:2},
+  {cat:'Matematika', q:"Uchburchak ichki burchaklari yig'indisi?", opts:["90","180","270","360"],                            ans:1},
+  {cat:'Matematika', q:"0.5 kasr - oddiy kasr sifatida?",       opts:["1/3","1/4","1/2","2/3"],                              ans:2},
+  {cat:'Matematika', q:"Doira yuzi formulasi?",                  opts:["2*pi*r","pi*r^2","pi*d","2*pi*r^2"],                  ans:1},
+  {cat:'Tarix',      q:"Amir Temur qachon tug'ilgan?",           opts:["1320","1336","1350","1370"],                          ans:1},
+  {cat:'Tarix',      q:"Birinchi jahon urushi qachon boshlangan?", opts:["1912","1913","1914","1915"],                        ans:2},
+  {cat:'Tarix',      q:"O'zbekiston mustaqilligini qachon e'lon qildi?", opts:["1989","1990","1991","1992"],                 ans:2},
+  {cat:'Tarix',      q:"Buyuk Ipak yo'li qachon faol bo'lgan?",  opts:["100 BCE - 1400 CE","1000 BCE - 500 CE","500 CE - 1800 CE","200 CE - 900 CE"], ans:0},
+  {cat:'Texnologiya', q:"HTML nima uchun ishlatiladi?",          opts:["Dizayn","Dasturlash","Veb sahifa tuzilishi","Ma'lumotlar bazasi"], ans:2},
+  {cat:'Texnologiya', q:"CPU nima?",                             opts:["Grafika kartasi","Markaziy protsessor","Xotira qurilmasi","Tarmoq kartasi"], ans:1},
+  {cat:'Texnologiya', q:"WWW nima degani?",                      opts:["World Wide Web","Wide World Web","World Web Wide","Web World Wide"], ans:0},
+  {cat:'Texnologiya', q:"1 GB = ? MB",                           opts:["100 MB","512 MB","1000 MB","1024 MB"],                ans:3},
+  {cat:'Texnologiya', q:"Python qanday dasturlash tili?",        opts:["Kompilyatsiya","Interpretatsiya","Assembler","Mashina tili"], ans:1},
+  {cat:'Texnologiya', q:"Birinchi kompyuter virusi qachon yaratilgan?", opts:["1971","1981","1991","2001"],                   ans:0},
+  {cat:'Sport',      q:"Futbol jamoasida nechta o'yinchi?",      opts:["9","10","11","12"],                                   ans:2},
+  {cat:'Sport',      q:"Olimpiada o'yinlari necha yilda bir marta?", opts:["2","3","4","5"],                                  ans:2},
+  {cat:'Sport',      q:"Tennis kortida yakka o'yinda nechta o'yinchi?", opts:["1","2","3","4"],                              ans:1},
+  {cat:'Musiqa',     q:"Pianinoda nechta tugma bor?",            opts:["72","76","88","96"],                                  ans:2},
+  {cat:'Musiqa',     q:"Gitarada nechta tor bor?",               opts:["4","5","6","7"],                                     ans:2},
+  {cat:'Tabiat',     q:"Qaysi hayvon eng tez yuguradi?",         opts:["Sher","Gepard","Ot","Kenguru"],                       ans:1},
+  {cat:'Tabiat',     q:"Eng katta hayvon?",                      opts:["Fil","Ko'k kit","Zubr","Karkidon"],                   ans:1},
+  {cat:'Tabiat',     q:"Baliqlar nafas olish uchun nima ishlatadi?", opts:["O'pka","Jabralar","Teri","Burun"],                ans:1},
+  {cat:'Tabiat',     q:"Fotosintez qaysi qismida sodir bo'ladi?", opts:["Ildiz","Poya","Barg","Gul"],                        ans:2},
+  {cat:'Umumiy',     q:"1 yilda nechta kun bor (oddiy yil)?",    opts:["364","365","366","367"],                             ans:1},
+  {cat:'Umumiy',     q:"Telefon ixtiro qilgan kim?",             opts:["Thomas Edison","Nikola Tesla","Alexander Bell","Guglielmo Marconi"], ans:2},
+  {cat:'Umumiy',     q:"Quyosh tizimida nechta sayyora?",        opts:["7","8","9","10"],                                    ans:1},
+  {cat:'Umumiy',     q:"Kamalakda nechta rang?",                 opts:["5","6","7","8"],                                     ans:2},
+  {cat:'Umumiy',     q:"Insonning odatdagi tana harorati?",      opts:["35C","36C","37C","38C"],                              ans:2},
+  {cat:'Umumiy',     q:"Eng ko'p gapiriluvchi til?",             opts:["Ingliz","Ispan","Xitoy (mandarin)","Arab"],           ans:2},
+  {cat:'Umumiy',     q:"Qaysi vitamin quyosh nuridan hosil bo'ladi?", opts:["A","B12","C","D"],                               ans:3},
+  {cat:'Umumiy',     q:"Shakespeare qaysi mamlakatdan?",         opts:["Fransiya","Germaniya","Angliya","Italiya"],            ans:2},
+  {cat:'Umumiy',     q:"1 daqiqada necha sekund?",               opts:["30","60","90","120"],                                ans:1},
+  {cat:'Umumiy',     q:"Dunyoda nechta mamlakat bor?",           opts:["185","193","201","210"],                             ans:1},
 ];
 
-// в”Ђв”Ђ SESSION в”Ђв”Ђ
-const session  = JSON.parse(localStorage.getItem('gz_session')||'{}');
-const myKey    = localStorage.getItem('gz_current_user')||'';
-const p1Key    = session.player1 || myKey;
-const p2Key    = session.player2 || 'cpu';
-const roomCode = session.roomCode || '';
-const reward   = session.reward   || 60;
-const isSolo   = !session.player2 || session.player2==='cpu';
-const amIP1    = myKey===p1Key;
+// ── SESSION ──
+var session  = JSON.parse(localStorage.getItem('gz_session') || '{}');
+var myKey    = localStorage.getItem('gz_current_user') || '';
+var p1Key    = session.player1 || myKey;
+var p2Key    = session.player2 || 'cpu';
+var roomCode = session.roomCode || '';
+var reward   = session.reward   || 60;
+var isSolo   = !session.player2 || session.player2 === 'cpu';
+var amIP1    = myKey === p1Key;
 
-const usersObj = getUsers();
-const p1User   = usersObj[p1Key]||{username:p1Key||'O\'yinchi 1',skinColor:'#10b981'};
-const p2User   = isSolo ? {username:'CPU рџ¤–',skinColor:'#f43f5e'} : (usersObj[p2Key]||{username:p2Key,skinColor:'#f43f5e'});
+var usersObj = getUsers();
+var p1User   = usersObj[p1Key] || { username: p1Key || "O'yinchi 1", skinColor: '#10b981' };
+var p2User   = isSolo
+  ? { username: 'CPU [AI]', skinColor: '#f43f5e' }
+  : (usersObj[p2Key] || { username: p2Key, skinColor: '#f43f5e' });
 
-const TOTAL_Q=10, TIME=15;
-let questions, qIndex, scores, activeTurn, timerInt, timeLeft, myAnswered, oppAnswered, _roomUnsub;
-// activeTurn: index of who should answer NEXT (0=p1, 1=p2)
-// In multiplayer: both answer same Q simultaneously, then next Q
+// ── CONSTANTS ──
+var TOTAL_Q = 10, TIME = 15;
 
-window.addEventListener('DOMContentLoaded',()=>{
-  document.getElementById('nav-coins').textContent=getCurrentUser()?.coins||0;
-  document.getElementById('rs-n1').textContent=p1User.username;
-  document.getElementById('rs-n2').textContent=p2User.username;
+// ── STATE ──
+var questions, qIndex, scores, timerInt, timeLeft, myAnswered, oppAnswered, gameOver, _stateUnsub, _cancelRoom;
+
+// ── INIT ──
+window.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('nav-coins').textContent = getCurrentUser()?.coins || 0;
+  document.getElementById('rs-n1').textContent     = p1User.username;
+  document.getElementById('rs-n2').textContent     = p2User.username;
   setupPlayers();
   if (!isSolo) initMultiplayer();
   restartGame();
 });
 
-function setupPlayers(){
-  document.getElementById('sc1-name').textContent=p1User.username;
-  document.getElementById('sc1-av').textContent=p1User.username.charAt(0).toUpperCase();
-  document.getElementById('sc1-av').style.background=p1User.skinColor||'#10b981';
-  document.getElementById('sc2-name').textContent=p2User.username;
-  document.getElementById('sc2-av').textContent=p2User.username.charAt(0).toUpperCase();
-  document.getElementById('sc2-av').style.background=p2User.skinColor||'#f43f5e';
+function setupPlayers() {
+  document.getElementById('sc1-name').textContent        = p1User.username;
+  document.getElementById('sc1-av').textContent          = p1User.username.charAt(0).toUpperCase();
+  document.getElementById('sc1-av').style.background     = p1User.skinColor || '#10b981';
+  document.getElementById('sc2-name').textContent        = p2User.username;
+  document.getElementById('sc2-av').textContent          = p2User.username.charAt(0).toUpperCase();
+  document.getElementById('sc2-av').style.background     = p2User.skinColor || '#f43f5e';
 }
 
-async function initMultiplayer(){
-  if(!roomCode) return;
-  const ably = getAbly();
-  if(!ably){setConnBadge(false);return;}
+// ── MULTIPLAYER ──
+function initMultiplayer() {
+  if (!roomCode) return;
 
-  if(amIP1){
-    document.getElementById('wait-overlay').style.display='flex';
-    document.getElementById('wait-code').textContent=roomCode;
-    _roomUnsub = hostRoom('quiz', roomCode, myKey, () => {
-      document.getElementById('wait-overlay').style.display='none';
-      showToast('рџЋ® Raqib ulandi!');
-    });
+  if (amIP1) {
+    document.getElementById('wait-overlay').style.display = 'flex';
+    document.getElementById('wait-code').textContent = roomCode;
   } else {
-    document.getElementById('wait-overlay').style.display='none';
-    _roomUnsub = guestJoinRoom('quiz', roomCode, myKey, () => {
-      showToast('рџЋ® O\'yin boshlandi!');
-    });
+    document.getElementById('wait-overlay').style.display = 'none';
   }
 
-  // Opponent answer sync
-  const statUnsub = listenGameState('quiz', roomCode, (data) => {
-    if(!data || gameOver) return;
-    const myRole = amIP1?'p1':'p2';
-    const oppRole = amIP1?'p2':'p1';
-    if(data.qIndex===qIndex && data[oppRole+'Answered']!==undefined && oppAnswered===null){
-      oppAnswered = data[oppRole+'Answered'];
+  _cancelRoom = enterRoom('quiz', roomCode, myKey, function(p1, p2) {
+    document.getElementById('wait-overlay').style.display = 'none';
+    if (!p1 || !p2) {
+      showToast('Ulanishda xatolik!', 'error');
+      return;
+    }
+    showToast("Raqib ulandi! O'yin boshlandi!");
+    setConnBadge(true);
+  });
+
+  // Listen for opponent's answer on the same question
+  _stateUnsub = listenState('quiz', roomCode, function(data) {
+    if (!data || gameOver) return;
+    var myRole  = amIP1 ? 'p1' : 'p2';
+    var oppRole = amIP1 ? 'p2' : 'p1';
+
+    // Opponent answered this question
+    if (data.qIndex === qIndex && data[oppRole + 'Ans'] !== undefined && oppAnswered === null) {
+      oppAnswered = data[oppRole + 'Ans'];
+
+      // Update opponent score display
+      var oppIdx = amIP1 ? 1 : 0;
+      if (data[oppRole + 'Score'] !== undefined) {
+        scores[oppIdx] = data[oppRole + 'Score'];
+        document.getElementById('sc' + (oppIdx + 1) + '-pts').textContent = scores[oppIdx];
+      }
       showOppFeedback(oppAnswered);
-      const oppIdx = amIP1?1:0;
-      scores[oppIdx] = data[oppRole+'Score']||0;
-      document.getElementById(`sc${oppIdx+1}-pts`).textContent=scores[oppIdx];
-      if(myAnswered!==null) advanceAfterBoth();
+
+      if (myAnswered !== null) {
+        advanceAfterBoth();
+      } else {
+        document.getElementById('opp-status').textContent = 'Raqib javob berdi, siz ham javob bering!';
+      }
     }
   });
-  const orig = _roomUnsub;
-  _roomUnsub = () => { orig&&orig(); statUnsub&&statUnsub(); };
+
   setConnBadge(true);
 }
 
-function setConnBadge(online){
-  const b=document.getElementById('conn-badge');
-  b.className=`conn-badge ${online?'online':'offline'}`;
-  document.getElementById('conn-text').textContent=online?'Ulangan':'Ulanmagan';
+function setConnBadge(online) {
+  var b = document.getElementById('conn-badge');
+  b.className = 'conn-badge ' + (online ? 'online' : 'offline');
+  document.getElementById('conn-text').textContent = online ? 'Ulangan' : 'Ulanmagan';
 }
 
-function restartGame(){
-  const seed=Date.now();
-  questions=[...QUESTIONS].sort(()=>Math.random()-.5).slice(0,TOTAL_Q);
-  qIndex=0; scores=[0,0]; activeTurn=0; myAnswered=null; oppAnswered=null;
+// ── GAME ──
+function restartGame() {
+  gameOver    = false;
+  // Shuffle and pick questions
+  questions = QUESTIONS.slice().sort(function(){ return Math.random() - 0.5; }).slice(0, TOTAL_Q);
+  qIndex      = 0;
+  scores      = [0, 0];
+  myAnswered  = null;
+  oppAnswered = null;
   document.getElementById('result-overlay').classList.remove('show');
-  document.getElementById('sc1-pts').textContent='0';
-  document.getElementById('sc2-pts').textContent='0';
-  // If multiplayer host, push seed
-  if(!isSolo&&amIP1){
-    getDB()?.ref(`rooms/quiz/${roomCode}/state`).set({seed,qIndex:0,p1Score:0,p2Score:0});
-  }
+  document.getElementById('sc1-pts').textContent = '0';
+  document.getElementById('sc2-pts').textContent = '0';
   showQuestion();
 }
 
-function showQuestion(){
-  if(qIndex>=TOTAL_Q){endGame();return;}
-  myAnswered=null; oppAnswered=null;
+function showQuestion() {
+  if (qIndex >= TOTAL_Q) { endGame(); return; }
+  myAnswered  = null;
+  oppAnswered = null;
   clearInterval(timerInt);
-  const q=questions[qIndex];
 
-  document.getElementById('q-counter').textContent=`Savol ${qIndex+1} / ${TOTAL_Q}`;
-  document.getElementById('prog-fill').style.width=`${(qIndex/TOTAL_Q)*100}%`;
-  document.getElementById('q-turn').textContent=isSolo?`Navbat: ${activeTurn===0?p1User.username:p2User.username}`:'Ikkalasi javob beradi';
-  document.getElementById('sc1').classList.toggle('active',true);
-  document.getElementById('sc2').classList.toggle('active',true);
-  document.getElementById('q-cat').textContent=q.cat;
-  document.getElementById('q-text').textContent=q.q;
-  document.getElementById('feedback').textContent='';
-  document.getElementById('opp-status').textContent='';
+  var q = questions[qIndex];
+  document.getElementById('q-counter').textContent    = 'Savol ' + (qIndex + 1) + ' / ' + TOTAL_Q;
+  document.getElementById('prog-fill').style.width    = ((qIndex / TOTAL_Q) * 100) + '%';
+  document.getElementById('q-mode').textContent       = isSolo ? 'Sizning navbatingiz' : 'Ikkalasi javob beradi';
+  document.getElementById('q-cat').textContent        = q.cat;
+  document.getElementById('q-text').textContent       = q.q;
+  document.getElementById('feedback').textContent     = '';
+  document.getElementById('feedback').style.color     = '#fff';
+  document.getElementById('opp-status').textContent   = '';
 
-  const wrap=document.getElementById('answers');
-  wrap.innerHTML='';
-  q.opts.forEach((opt,i)=>{
-    const btn=document.createElement('button');
-    btn.className='ans-btn'; btn.textContent=opt;
-    btn.onclick=()=>answer(i);
+  // Render answer buttons
+  var wrap = document.getElementById('answers');
+  wrap.innerHTML = '';
+  for (var i = 0; i < q.opts.length; i++) {
+    var btn = document.createElement('button');
+    btn.className   = 'ans-btn';
+    btn.textContent = q.opts[i];
+    btn.setAttribute('data-idx', i);
+    btn.onclick = (function(idx){ return function(){ answer(idx); }; })(i);
     wrap.appendChild(btn);
-  });
+  }
 
-  timeLeft=TIME; updateTimer(timeLeft,TIME);
-  timerInt=setInterval(()=>{
+  // Timer
+  timeLeft = TIME;
+  updateTimer(timeLeft, TIME);
+  timerInt = setInterval(function() {
     timeLeft--;
-    updateTimer(timeLeft,TIME);
-    if(timeLeft<=5){
-      document.getElementById('timer-arc').style.stroke='#ef4444';
-      document.getElementById('timer-text').style.color='#ef4444';
+    updateTimer(timeLeft, TIME);
+    if (timeLeft <= 5) {
+      document.getElementById('timer-arc').style.stroke = '#ef4444';
+      document.getElementById('timer-text').style.color  = '#ef4444';
     }
-    if(timeLeft<=0){clearInterval(timerInt);if(myAnswered===null)timeUp();}
-  },1000);
+    if (timeLeft <= 0) {
+      clearInterval(timerInt);
+      if (myAnswered === null) timeUp();
+    }
+  }, 1000);
 
-  // CPU answer
-  if(isSolo&&activeTurn===1){
-    setTimeout(()=>{if(myAnswered===null)return;if(oppAnswered===null){const p=Math.random()<.7?q.ans:Math.floor(Math.random()*4);cpuAnswer(p);}},1500+Math.random()*3000);
+  // CPU solo answer
+  if (isSolo) {
+    var cpuDelay = 1500 + Math.random() * 3000;
+    setTimeout(function() {
+      if (oppAnswered === null) {
+        var pick = Math.random() < 0.65 ? q.ans : Math.floor(Math.random() * 4);
+        cpuAnswer(pick);
+      }
+    }, cpuDelay);
   }
 }
 
-function answer(idx){
-  if(myAnswered!==null) return;
-  // In solo: only current player's turn
-  if(isSolo){
-    const myTurn=amIP1?0:1;
-    if(activeTurn!==myTurn){showToast('вЏі Sizning navbatingiz emas!','error');return;}
-  }
-  myAnswered=idx;
+function answer(idx) {
+  if (myAnswered !== null) return;
+  myAnswered = idx;
   clearInterval(timerInt);
 
-  const q=questions[qIndex];
-  const btns=document.querySelectorAll('.ans-btn');
-  const correct=idx===q.ans;
-  const pts=correct?(timeLeft>=10?3:timeLeft>=5?2:1):0;
-  const myIdx=amIP1?0:1;
-  scores[myIdx]+=pts;
-  document.getElementById(`sc${myIdx+1}-pts`).textContent=scores[myIdx];
+  var q       = questions[qIndex];
+  var correct = idx === q.ans;
+  var pts     = correct ? (timeLeft >= 10 ? 3 : timeLeft >= 5 ? 2 : 1) : 0;
+  var myIdx   = amIP1 ? 0 : 1;
+  scores[myIdx] += pts;
+  document.getElementById('sc' + (myIdx + 1) + '-pts').textContent = scores[myIdx];
 
-  btns.forEach(b=>b.classList.add('locked'));
+  // Lock and highlight
+  var btns = document.querySelectorAll('.ans-btn');
+  btns.forEach(function(b){ b.classList.add('locked'); });
   btns[q.ans].classList.add('correct');
-  if(!correct) btns[idx].classList.add('wrong');
-  document.getElementById('feedback').style.color=correct?'#34d399':'#f87171';
-  document.getElementById('feedback').textContent=correct?`вњ… To'g'ri! +${pts} ball`:'вќЊ Noto\'g\'ri!';
+  if (!correct) btns[idx].classList.add('wrong');
 
-  if(!isSolo){
-    const myRole=amIP1?'p1':'p2';
-    sendState('quiz', roomCode, {
-      qIndex, [`${myRole}Answered`]:idx, [`${myRole}Score`]:scores[myIdx]
-    });
-    if(oppAnswered!==null) advanceAfterBoth();
-    else document.getElementById('opp-status').textContent='вЏі Raqib javob bermoqda...';
-  } else {
-    // Solo: CPU answers shortly after
-    if(activeTurn===0){
-      if(oppAnswered===null){
-        const cpuPick=Math.random()<.7?q.ans:Math.floor(Math.random()*4);
-        setTimeout(()=>cpuAnswer(cpuPick), 800+Math.random()*1200);
-      }
+  document.getElementById('feedback').style.color   = correct ? '#34d399' : '#f87171';
+  document.getElementById('feedback').textContent   = correct ? ('Togri! +' + pts + ' ball') : "Notogri!";
+
+  if (!isSolo) {
+    var myRole = amIP1 ? 'p1' : 'p2';
+    var payload = { qIndex: qIndex };
+    payload[myRole + 'Ans']   = idx;
+    payload[myRole + 'Score'] = scores[myIdx];
+    sendState('quiz', roomCode, payload);
+
+    if (oppAnswered !== null) {
+      advanceAfterBoth();
     } else {
+      document.getElementById('opp-status').textContent = 'Raqib javob bermoqda...';
+    }
+  } else {
+    // Solo: wait for CPU answer
+    if (oppAnswered !== null) {
       advanceSolo();
     }
+    // else CPU answer will trigger advanceSolo when both answered
   }
 }
 
-function cpuAnswer(idx){
-  oppAnswered=idx;
-  const q=questions[qIndex];
-  const correct=idx===q.ans;
-  const pts=correct?2:0;
-  scores[1]+=pts;
-  document.getElementById('sc2-pts').textContent=scores[1];
+function cpuAnswer(idx) {
+  oppAnswered = idx;
+  var q       = questions[qIndex];
+  var correct = idx === q.ans;
+  var pts     = correct ? 2 : 0;
+  scores[1]  += pts;
+  document.getElementById('sc2-pts').textContent = scores[1];
   showOppFeedback(idx);
-  if(myAnswered!==null) advanceSolo();
+  if (myAnswered !== null) advanceSolo();
 }
 
-function showOppFeedback(idx){
-  const q=questions[qIndex];
-  const btns=document.querySelectorAll('.ans-btn');
-  if(btns[idx]) btns[idx].classList.add('opponent-answered');
-  const oppName=amIP1?p2User.username:p1User.username;
-  document.getElementById('opp-status').textContent=
-    idx===q.ans?`вњ… ${oppName} to'g'ri javob berdi!`:`вќЊ ${oppName} noto'g'ri javob berdi`;
+function showOppFeedback(idx) {
+  var q    = questions[qIndex];
+  var btns = document.querySelectorAll('.ans-btn');
+  if (btns[idx]) btns[idx].classList.add('opp-pick');
+  var oppName = amIP1 ? p2User.username : p1User.username;
+  var correct = idx === q.ans;
+  document.getElementById('opp-status').textContent =
+    correct ? (oppName + " to'g'ri javob berdi!") : (oppName + " noto'g'ri javob berdi");
 }
 
-function advanceSolo(){
-  setTimeout(()=>{
+function advanceSolo() {
+  setTimeout(function() {
     qIndex++;
-    activeTurn=activeTurn===0?1:0;
-    myAnswered=null; oppAnswered=null;
+    myAnswered  = null;
+    oppAnswered = null;
     showQuestion();
-  },1500);
+  }, 1600);
 }
 
-function advanceAfterBoth(){
-  document.getElementById('opp-status').textContent='';
-  setTimeout(()=>{
+function advanceAfterBoth() {
+  setTimeout(function() {
     qIndex++;
-    myAnswered=null; oppAnswered=null;
-    if(!isSolo&&amIP1) sendState('quiz', roomCode, {qIndex});
+    myAnswered  = null;
+    oppAnswered = null;
     showQuestion();
-  },1600);
+  }, 1600);
 }
 
-function timeUp(){
-  myAnswered=-1;
-  document.querySelectorAll('.ans-btn').forEach(b=>b.classList.add('locked'));
-  document.querySelectorAll('.ans-btn')[questions[qIndex].ans].classList.add('correct');
-  document.getElementById('feedback').style.color='#f87171';
-  document.getElementById('feedback').textContent='вЏ° Vaqt tugadi!';
-  if(!isSolo){
-    const myRole=amIP1?'p1':'p2';
-    sendState('quiz', roomCode, {qIndex,[`${myRole}Answered`]:-1});
-    if(oppAnswered!==null) advanceAfterBoth();
-    else document.getElementById('opp-status').textContent='вЏі Raqib javob bermoqda...';
+function timeUp() {
+  myAnswered = -1;
+  var q   = questions[qIndex];
+  var btns = document.querySelectorAll('.ans-btn');
+  btns.forEach(function(b){ b.classList.add('locked'); });
+  btns[q.ans].classList.add('correct');
+  document.getElementById('feedback').style.color  = '#f87171';
+  document.getElementById('feedback').textContent  = 'Vaqt tugadi!';
+
+  if (!isSolo) {
+    var myRole = amIP1 ? 'p1' : 'p2';
+    var payload = { qIndex: qIndex };
+    payload[myRole + 'Ans'] = -1;
+    sendState('quiz', roomCode, payload);
+    if (oppAnswered !== null) advanceAfterBoth();
+    else document.getElementById('opp-status').textContent = 'Raqib javob bermoqda...';
   } else {
-    setTimeout(()=>cpuAnswer(Math.floor(Math.random()*4)),600);
+    setTimeout(function() {
+      cpuAnswer(Math.floor(Math.random() * 4));
+    }, 700);
   }
 }
 
-function updateTimer(t,max){
-  const circ=175.9, offset=circ*(1-t/max);
-  document.getElementById('timer-arc').style.strokeDashoffset=offset;
-  document.getElementById('timer-text').textContent=t;
-  if(t>5){
-    document.getElementById('timer-arc').style.stroke='#10b981';
-    document.getElementById('timer-text').style.color='#fff';
+function updateTimer(t, max) {
+  var circumference = 175.9;
+  var offset        = circumference * (1 - t / max);
+  document.getElementById('timer-arc').style.strokeDashoffset = offset;
+  document.getElementById('timer-text').textContent           = t;
+  if (t > 5) {
+    document.getElementById('timer-arc').style.stroke = '#10b981';
+    document.getElementById('timer-text').style.color  = '#fff';
   }
 }
 
-function endGame(){
+// ── END GAME ──
+function endGame() {
+  gameOver = true;
   clearInterval(timerInt);
-  if(_roomUnsub)_roomUnsub();
-  const[s1,s2]=scores;
-  let emoji,title,sub,coinsText='';
-  document.getElementById('rs-s1').textContent=s1;
-  document.getElementById('rs-s2').textContent=s2;
+  if (_stateUnsub) { _stateUnsub(); _stateUnsub = null; }
 
-  if(s1===s2){
-    emoji='рџ¤ќ';title='Durang!';sub='Ikki o\'yinchi teng ball to\'pladi!';
-    if(!isSolo)finishRoom('quiz',roomCode,'draw');
+  var s1 = scores[0], s2 = scores[1];
+  document.getElementById('rs-s1').textContent = s1;
+  document.getElementById('rs-s2').textContent = s2;
+
+  var icon, title, sub, coinsText = '';
+
+  if (s1 === s2) {
+    icon  = '&#9868;';
+    title = 'Durang!';
+    sub   = "Ikki o'yinchi teng ball to'pladi!";
   } else {
-    const winner=s1>s2?0:1;
-    const iWon=(winner===0&&amIP1)||(winner===1&&!amIP1)||(isSolo&&winner===0);
-    const winName=winner===0?p1User.username:p2User.username;
-    if(iWon||(isSolo&&winner===0)){
-      emoji='рџЏ†';title='G\'OLIBSIZ!';sub=`${winName} yutdi: ${s1} vs ${s2}`;
-      coinsText=`+рџЄ™ ${reward} tanga!`;
-      addCoins(reward);addResult(true);
-      document.getElementById('nav-coins').textContent=getCurrentUser()?.coins||0;
-      if(!isSolo)finishRoom('quiz',roomCode,winner===0?p1Key:p2Key);
+    var winner = s1 > s2 ? 0 : 1;
+    var iWon   = (winner === 0 && amIP1) || (winner === 1 && !amIP1) || (isSolo && winner === 0);
+    var winName = winner === 0 ? p1User.username : p2User.username;
+    var winScore = winner === 0 ? s1 : s2;
+    var loseScore = winner === 0 ? s2 : s1;
+
+    if (iWon) {
+      icon      = '&#9733;';
+      title     = "G'OLIBSIZ!";
+      sub       = winName + ' yutdi: ' + winScore + ' - ' + loseScore;
+      coinsText = '+&#9679; ' + reward + ' tanga!';
+      addCoins(reward);
+      addResult(true);
+      document.getElementById('nav-coins').textContent = getCurrentUser()?.coins || 0;
     } else {
-      emoji='рџў';title='Yutqazdingiz';sub=`${winName} yutdi: ${Math.max(s1,s2)} vs ${Math.min(s1,s2)}`;
+      icon  = '&#9711;';
+      title = 'Yutqazdingiz';
+      sub   = winName + ' yutdi: ' + winScore + ' - ' + loseScore;
       addResult(false);
-      if(!isSolo)finishRoom('quiz',roomCode,winner===0?p1Key:p2Key);
     }
   }
-  document.getElementById('res-emoji').textContent=emoji;
-  document.getElementById('res-title').textContent=title;
-  document.getElementById('res-sub').textContent=sub;
-  document.getElementById('res-coins').textContent=coinsText;
+
+  document.getElementById('res-icon').innerHTML    = icon;
+  document.getElementById('res-title').textContent = title;
+  document.getElementById('res-sub').textContent   = sub;
+  document.getElementById('res-coins').innerHTML   = coinsText;
   document.getElementById('result-overlay').classList.add('show');
   refreshCoinDisplay();
 }
 
-function goHome(){if(_roomUnsub)_roomUnsub();window.location.href='dashboard.html';}
+function goHome() {
+  clearInterval(timerInt);
+  if (_stateUnsub) _stateUnsub();
+  if (_cancelRoom) _cancelRoom();
+  window.location.href = 'dashboard.html';
+}
 </script>
 </body>
 </html>
-

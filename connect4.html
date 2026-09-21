@@ -4,9 +4,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>GameZone - Connect Four</title>
-  <!-- Ably SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     body{background:#0a0a1a;color:#fff;font-family:'Rajdhani',sans-serif;min-height:100vh;display:flex;flex-direction:column;}
@@ -72,7 +71,7 @@
     .result-overlay.show{display:flex;}
     .result-box{background:#13132a;border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:44px 36px;text-align:center;max-width:340px;width:90%;animation:bounceIn .4s ease;}
     @keyframes bounceIn{0%{transform:scale(.7);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
-    .result-emoji{font-size:68px;display:block;margin-bottom:14px;}
+    .result-icon{font-size:68px;display:block;margin-bottom:14px;line-height:1;}
     .result-title{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:900;margin-bottom:8px;}
     .result-sub{color:rgba(255,255,255,.5);font-size:14px;margin-bottom:6px;}
     .result-coins{color:#fbbf24;font-size:17px;font-weight:700;margin-bottom:26px;}
@@ -83,28 +82,37 @@
     .res-home{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
     .res-home:hover{background:rgba(255,255,255,.12);}
   </style>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
 </head>
 <body>
+
 <nav class="navbar">
-  <button class="back-btn" onclick="goHome()">в†ђ Orqaga</button>
-  <div class="nav-logo">рџ”ґ Connect Four</div>
-  <div class="coin-display">рџЄ™ <span id="nav-coins">0</span></div>
+  <button class="back-btn" onclick="goHome()">&#8592; Orqaga</button>
+  <div class="nav-logo">&#9635; Connect Four</div>
+  <div class="coin-display">&#9679; <span id="nav-coins">0</span></div>
 </nav>
 
 <div class="game-wrap">
   <h1 class="game-title">Connect Four</h1>
-  <div class="conn-badge online" id="conn-badge"><span class="conn-dot"></span><span id="conn-text">Ulangan</span></div>
+  <div class="conn-badge online" id="conn-badge">
+    <span class="conn-dot"></span>
+    <span id="conn-text">Ulangan</span>
+  </div>
 
   <div class="players-bar">
     <div class="player-info active-player" id="p1-info">
       <div class="p-avatar" id="p1-avatar">?</div>
-      <div><div class="p-name" id="p1-name">O'yinchi 1</div><span class="p-chip" style="background:#ef4444"></span></div>
+      <div>
+        <div class="p-name" id="p1-name">O&#39;yinchi 1</div>
+        <span class="p-chip" style="background:#ef4444"></span>
+      </div>
     </div>
     <div class="vs-badge">VS</div>
     <div class="player-info right p2-wrap" id="p2-info">
       <div class="p-avatar" id="p2-avatar">?</div>
-      <div><div class="p-name" id="p2-name">O'yinchi 2</div><span class="p-chip" style="background:#0ea5e9"></span></div>
+      <div>
+        <div class="p-name" id="p2-name">O&#39;yinchi 2</div>
+        <span class="p-chip" style="background:#0ea5e9"></span>
+      </div>
     </div>
   </div>
 
@@ -116,31 +124,33 @@
   </div>
 
   <div class="controls">
-    <button class="ctrl-btn btn-play" onclick="resetGame()">рџ”„ Qayta O'yna</button>
-    <button class="ctrl-btn btn-back" onclick="goHome()">рџЏ  Bosh Sahifa</button>
+    <button class="ctrl-btn btn-play" onclick="resetGame()">&#8635; Qayta O&#39;yna</button>
+    <button class="ctrl-btn btn-back" onclick="goHome()">&#8962; Bosh Sahifa</button>
   </div>
 </div>
 
+<!-- Waiting overlay: only shown to host (player1) -->
 <div class="wait-overlay" id="wait-overlay" style="display:none">
   <div class="wait-box">
     <div class="spinner"></div>
     <div class="wait-title">Raqib kutilmoqda...</div>
     <div class="wait-sub">Xona kodi:</div>
-    <div class="wait-code" id="wait-code">вЂ”</div>
+    <div class="wait-code" id="wait-code">&#8212;</div>
     <div class="wait-sub">Raqibingizga shu kodni yuboring</div>
-    <button class="cancel-btn" onclick="goHome()">вњ• Bekor qilish</button>
+    <button class="cancel-btn" onclick="goHome()">&#10006; Bekor qilish</button>
   </div>
 </div>
 
+<!-- Result overlay -->
 <div class="result-overlay" id="result-overlay">
   <div class="result-box">
-    <span class="result-emoji" id="res-emoji">рџЏ†</span>
+    <span class="result-icon" id="res-icon">&#9733;</span>
     <div class="result-title" id="res-title"></div>
     <div class="result-sub"   id="res-sub"></div>
     <div class="result-coins" id="res-coins"></div>
     <div class="result-btns">
-      <button class="res-btn res-play" onclick="resetGame()">рџ”„ Qayta</button>
-      <button class="res-btn res-home" onclick="goHome()">рџЏ  Uy</button>
+      <button class="res-btn res-play" onclick="resetGame()">&#8635; Qayta</button>
+      <button class="res-btn res-home" onclick="goHome()">&#8962; Uy</button>
     </div>
   </div>
 </div>
@@ -148,7 +158,7 @@
 <script src="firebase.js"></script>
 <script src="coins.js"></script>
 <script>
-const ROWS = 6, COLS = 7;
+// ── SESSION ──
 const session  = JSON.parse(localStorage.getItem('gz_session') || '{}');
 const myKey    = localStorage.getItem('gz_current_user') || '';
 const p1Key    = session.player1 || myKey;
@@ -159,14 +169,19 @@ const isSolo   = !session.player2 || session.player2 === 'cpu';
 const amIP1    = myKey === p1Key;
 
 const usersObj = getUsers();
-const p1User   = usersObj[p1Key] || { username: p1Key || 'O\'yinchi 1', skinColor: '#ef4444' };
+const p1User   = usersObj[p1Key] || { username: p1Key || "O'yinchi 1", skinColor: '#ef4444' };
 const p2User   = isSolo
-  ? { username: 'CPU рџ¤–', skinColor: '#0ea5e9' }
+  ? { username: 'CPU [AI]', skinColor: '#0ea5e9' }
   : (usersObj[p2Key] || { username: p2Key, skinColor: '#0ea5e9' });
 
-let grid, currentPlayer, gameOver, _roomUnsub;
+// ── CONSTANTS ──
+const ROWS = 6, COLS = 7;
 
-window.addEventListener('DOMContentLoaded', () => {
+// ── STATE ──
+let grid, currentPlayer, gameOver, _stateUnsub, _cancelRoom;
+
+// ── INIT ──
+window.addEventListener('DOMContentLoaded', function() {
   document.getElementById('nav-coins').textContent = getCurrentUser()?.coins || 0;
   setupPlayers();
   buildBoard();
@@ -175,234 +190,342 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupPlayers() {
-  document.getElementById('p1-name').textContent   = p1User.username;
-  document.getElementById('p1-avatar').textContent = p1User.username.charAt(0).toUpperCase();
+  document.getElementById('p1-name').textContent        = p1User.username;
+  document.getElementById('p1-avatar').textContent      = p1User.username.charAt(0).toUpperCase();
   document.getElementById('p1-avatar').style.background = p1User.skinColor || '#ef4444';
-  document.getElementById('p2-name').textContent   = p2User.username;
-  document.getElementById('p2-avatar').textContent = p2User.username.charAt(0).toUpperCase();
+  document.getElementById('p2-name').textContent        = p2User.username;
+  document.getElementById('p2-avatar').textContent      = p2User.username.charAt(0).toUpperCase();
   document.getElementById('p2-avatar').style.background = p2User.skinColor || '#0ea5e9';
 }
 
 function buildBoard() {
-  const btnWrap = document.getElementById('col-btns');
+  // Column drop buttons
+  var btnWrap = document.getElementById('col-btns');
   btnWrap.innerHTML = '';
-  for (let c = 0; c < COLS; c++) {
-    const b = document.createElement('button');
-    b.className = 'col-btn'; b.id = `cb-${c}`; b.textContent = 'в–ј';
-    b.onclick = () => dropPiece(c);
-    btnWrap.appendChild(b);
+  for (var c = 0; c < COLS; c++) {
+    var btn = document.createElement('button');
+    btn.className = 'col-btn';
+    btn.id = 'cb-' + c;
+    btn.innerHTML = '&#9660;';
+    btn.setAttribute('data-col', c);
+    btn.onclick = (function(col){ return function(){ dropPiece(col); }; })(c);
+    btnWrap.appendChild(btn);
   }
-  const boardEl = document.getElementById('board');
+  // Board cells
+  var boardEl = document.getElementById('board');
   boardEl.innerHTML = '';
-  for (let r = 0; r < ROWS; r++) {
-    const row = document.createElement('div');
+  for (var r = 0; r < ROWS; r++) {
+    var row = document.createElement('div');
     row.className = 'row';
-    for (let c = 0; c < COLS; c++) {
-      const cell = document.createElement('div');
-      cell.className = 'cell'; cell.id = `c-${r}-${c}`;
+    for (var cc = 0; cc < COLS; cc++) {
+      var cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.id = 'c-' + r + '-' + cc;
       row.appendChild(cell);
     }
     boardEl.appendChild(row);
   }
 }
 
-async function initMultiplayer() {
+// ── MULTIPLAYER ──
+function initMultiplayer() {
   if (!roomCode) return;
-  const ably = getAbly();
-  if (!ably) { setConnBadge(false); return; }
 
   if (amIP1) {
+    // Host: show waiting overlay with room code
     document.getElementById('wait-overlay').style.display = 'flex';
     document.getElementById('wait-code').textContent = roomCode;
-    _roomUnsub = hostRoom('connect4', roomCode, myKey, () => {
-      document.getElementById('wait-overlay').style.display = 'none';
-      showToast('рџЋ® Raqib ulandi!');
-    });
   } else {
+    // Guest: hide waiting overlay
     document.getElementById('wait-overlay').style.display = 'none';
-    _roomUnsub = guestJoinRoom('connect4', roomCode, myKey, () => {
-      showToast('рџЋ® O\'yin boshlandi!');
-    });
   }
 
-  const statUnsub = listenGameState('connect4', roomCode, (data) => {
-    if (data.gameOver || gameOver) return;
-    syncFromAbly(data);
+  // enterRoom handles both host and guest logic
+  _cancelRoom = enterRoom('connect4', roomCode, myKey, function(p1, p2) {
+    document.getElementById('wait-overlay').style.display = 'none';
+    if (!p1 || !p2) {
+      showToast('Ulanishda xatolik!', 'error');
+      return;
+    }
+    showToast('Raqib ulandi! O\'yin boshlandi!');
+    setConnBadge(true);
   });
-  const orig = _roomUnsub;
-  _roomUnsub = () => { orig && orig(); statUnsub && statUnsub(); };
+
+  // Listen for opponent moves
+  _stateUnsub = listenState('connect4', roomCode, function(data) {
+    if (!data || gameOver) return;
+    // Only apply state when it's now our turn (opponent just moved)
+    var myTurn = amIP1 ? 1 : 2;
+    if (data.currentPlayer === myTurn) {
+      grid          = data.grid;
+      currentPlayer = data.currentPlayer;
+      renderGrid();
+      updateStatus();
+      highlightActive();
+      var wc = fullWinCheck();
+      if (wc) {
+        endGame(wc.player, wc.cells);
+      } else if (isBoardFull()) {
+        endGame(0, []);
+      }
+    }
+  });
+
   setConnBadge(true);
 }
 
 function setConnBadge(online) {
-  const b = document.getElementById('conn-badge');
-  b.className = `conn-badge ${online ? 'online' : 'offline'}`;
+  var b = document.getElementById('conn-badge');
+  b.className = 'conn-badge ' + (online ? 'online' : 'offline');
   document.getElementById('conn-text').textContent = online ? 'Ulangan' : 'Ulanmagan';
 }
 
+// ── GAME LOGIC ──
 function resetGame() {
-  grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-  currentPlayer = 1; gameOver = false;
+  grid = [];
+  for (var r = 0; r < ROWS; r++) {
+    var rowArr = [];
+    for (var c = 0; c < COLS; c++) rowArr.push(0);
+    grid.push(rowArr);
+  }
+  currentPlayer = 1;
+  gameOver      = false;
   document.getElementById('result-overlay').classList.remove('show');
-  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-    const el = document.getElementById(`c-${r}-${c}`);
-    if (el) el.className = 'cell';
+
+  for (var r2 = 0; r2 < ROWS; r2++) {
+    for (var c2 = 0; c2 < COLS; c2++) {
+      var el = document.getElementById('c-' + r2 + '-' + c2);
+      if (el) el.className = 'cell';
+    }
   }
-  for (let c = 0; c < COLS; c++) {
-    const btn = document.getElementById(`cb-${c}`);
-    if (btn) btn.disabled = false;
+  for (var cc = 0; cc < COLS; cc++) {
+    var b = document.getElementById('cb-' + cc);
+    if (b) b.disabled = false;
   }
-  updateStatus(); highlightActive();
-  if (!isSolo) pushStateToAbly();
+  updateStatus();
+  highlightActive();
+  if (!isSolo) pushState();
 }
 
 function dropPiece(col) {
   if (gameOver) return;
-  if (!isSolo) {
-    const myTurn = amIP1 ? 1 : 2;
-    if (currentPlayer !== myTurn) { showToast('вЏі Raqib navbati!', 'error'); return; }
-  }
-  const row = getEmptyRow(col);
-  if (row === -1) return;
-  grid[row][col] = currentPlayer;
-  document.getElementById(`c-${row}-${col}`).classList.add(currentPlayer === 1 ? 'p1' : 'p2');
 
-  const winCells = checkWin(row, col, currentPlayer);
-  if (winCells) { setTimeout(() => endGame(currentPlayer, winCells), 300); return; }
-  if (isBoardFull()) { setTimeout(() => endGame(0, []), 300); return; }
+  // Multiplayer turn check
+  if (!isSolo) {
+    var myTurn = amIP1 ? 1 : 2;
+    if (currentPlayer !== myTurn) {
+      showToast('Raqib navbati!', 'error');
+      return;
+    }
+  }
+
+  var row = getEmptyRow(col);
+  if (row === -1) return;
+
+  grid[row][col] = currentPlayer;
+  var cell = document.getElementById('c-' + row + '-' + col);
+  if (cell) cell.classList.add(currentPlayer === 1 ? 'p1' : 'p2');
+
+  var winCells = checkWin(row, col, currentPlayer);
+  if (winCells) {
+    setTimeout(function(p, wc){ return function(){ endGame(p, wc); }; }(currentPlayer, winCells), 300);
+    if (!isSolo) pushState();
+    return;
+  }
+  if (isBoardFull()) {
+    setTimeout(function(){ endGame(0, []); }, 300);
+    if (!isSolo) pushState();
+    return;
+  }
 
   currentPlayer = currentPlayer === 1 ? 2 : 1;
-  updateStatus(); highlightActive();
-  if (!isSolo) pushStateToAbly();
-  if (isSolo && currentPlayer === 2) setTimeout(cpuMove, 500);
+  updateStatus();
+  highlightActive();
+
+  if (!isSolo) {
+    pushState();
+  } else if (currentPlayer === 2) {
+    setTimeout(cpuMove, 520);
+  }
 }
 
 function getEmptyRow(col) {
-  for (let r = ROWS - 1; r >= 0; r--) if (!grid[r][col]) return r;
+  for (var r = ROWS - 1; r >= 0; r--) {
+    if (!grid[r][col]) return r;
+  }
   return -1;
 }
-function isBoardFull() { return grid[0].every(v => v !== 0); }
 
-function pushStateToAbly() {
-  pushGameState('connect4', roomCode, { grid, currentPlayer, ts: Date.now() });
+function isBoardFull() {
+  for (var c = 0; c < COLS; c++) {
+    if (grid[0][c] === 0) return false;
+  }
+  return true;
 }
 
-function syncFromAbly(state) {
-  if (!state || gameOver) return;
-  const myTurn = amIP1 ? 1 : 2;
-  if (state.currentPlayer === myTurn) {
-    grid = state.grid;
-    currentPlayer = state.currentPlayer;
-    renderGrid(); updateStatus(); highlightActive();
-    const wc = fullWinCheck();
-    if (wc) endGame(wc.player, wc.cells);
-    else if (isBoardFull()) endGame(0, []);
-  }
+function pushState() {
+  sendState('connect4', roomCode, {
+    grid:          grid,
+    currentPlayer: currentPlayer,
+    ts:            Date.now()
+  });
 }
 
 function renderGrid() {
-  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-    const el = document.getElementById(`c-${r}-${c}`);
-    el.className = 'cell';
-    if (grid[r][c] === 1) el.classList.add('p1');
-    else if (grid[r][c] === 2) el.classList.add('p2');
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      var el = document.getElementById('c-' + r + '-' + c);
+      if (!el) continue;
+      el.className = 'cell';
+      if      (grid[r][c] === 1) el.classList.add('p1');
+      else if (grid[r][c] === 2) el.classList.add('p2');
+    }
   }
 }
 
-// Win check
+// ── WIN CHECK ──
 function checkWin(row, col, player) {
-  const dirs = [[0,1],[1,0],[1,1],[1,-1]];
-  for (const [dr,dc] of dirs) {
-    const line = getCells(row, col, dr, dc, player);
+  var dirs = [[0,1],[1,0],[1,1],[1,-1]];
+  for (var d = 0; d < dirs.length; d++) {
+    var dr = dirs[d][0], dc = dirs[d][1];
+    var line = getLine(row, col, dr, dc, player);
     if (line.length >= 4) return line;
   }
   return null;
 }
-function getCells(row, col, dr, dc, player) {
-  const cells = [[row,col]];
-  for (const d of [-1,1]) {
-    let r = row+dr*d, c = col+dc*d;
-    while (r>=0&&r<ROWS&&c>=0&&c<COLS&&grid[r][c]===player) { cells.push([r,c]); r+=dr*d; c+=dc*d; }
+
+function getLine(row, col, dr, dc, player) {
+  var cells = [[row, col]];
+  var signs = [-1, 1];
+  for (var s = 0; s < 2; s++) {
+    var sign = signs[s];
+    var r = row + dr * sign;
+    var c = col + dc * sign;
+    while (r >= 0 && r < ROWS && c >= 0 && c < COLS && grid[r][c] === player) {
+      cells.push([r, c]);
+      r += dr * sign;
+      c += dc * sign;
+    }
   }
   return cells;
 }
+
 function fullWinCheck() {
-  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) {
-    if (!grid[r][c]) continue;
-    const w = checkWin(r,c,grid[r][c]);
-    if (w) return { player: grid[r][c], cells: w };
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      if (!grid[r][c]) continue;
+      var w = checkWin(r, c, grid[r][c]);
+      if (w) return { player: grid[r][c], cells: w };
+    }
   }
   return null;
 }
 
-// CPU
+// ── CPU AI ──
 function cpuMove() {
-  let col = findWinMove(2) ?? findWinMove(1) ?? (getEmptyRow(3)!==-1 ? 3 : null) ?? randomCol();
+  var col = findWinMove(2);
+  if (col === null) col = findWinMove(1);
+  if (col === null && getEmptyRow(3) !== -1) col = 3;
+  if (col === null) col = randomCol();
   if (col !== null) dropPiece(col);
 }
+
 function findWinMove(player) {
-  for (let c=0;c<COLS;c++) {
-    const r = getEmptyRow(c); if (r===-1) continue;
-    grid[r][c]=player;
-    const w = checkWin(r,c,player);
-    grid[r][c]=0;
+  for (var c = 0; c < COLS; c++) {
+    var r = getEmptyRow(c);
+    if (r === -1) continue;
+    grid[r][c] = player;
+    var w = checkWin(r, c, player);
+    grid[r][c] = 0;
     if (w) return c;
   }
   return null;
 }
+
 function randomCol() {
-  const valid = [];
-  for (let c=0;c<COLS;c++) if (getEmptyRow(c)!==-1) valid.push(c);
-  return valid.length ? valid[Math.floor(Math.random()*valid.length)] : null;
+  var valid = [];
+  for (var c = 0; c < COLS; c++) {
+    if (getEmptyRow(c) !== -1) valid.push(c);
+  }
+  return valid.length ? valid[Math.floor(Math.random() * valid.length)] : null;
 }
 
+// ── UI HELPERS ──
 function highlightActive() {
-  document.getElementById('p1-info').classList.toggle('active-player', currentPlayer===1);
-  document.getElementById('p2-info').classList.toggle('active-player', currentPlayer===2);
-}
-function updateStatus() {
-  const name = currentPlayer===1 ? p1User.username : p2User.username;
-  document.getElementById('status').textContent = `${name} navbati`;
+  document.getElementById('p1-info').classList.toggle('active-player', currentPlayer === 1);
+  document.getElementById('p2-info').classList.toggle('active-player', currentPlayer === 2);
 }
 
+function updateStatus() {
+  var name = currentPlayer === 1 ? p1User.username : p2User.username;
+  document.getElementById('status').textContent = name + ' navbati';
+}
+
+// ── END GAME ──
 function endGame(winner, winCells) {
   gameOver = true;
-  if (_roomUnsub) _roomUnsub();
-  for (let c=0;c<COLS;c++) { const b=document.getElementById(`cb-${c}`); if(b) b.disabled=true; }
-  if (winCells) winCells.forEach(([r,c]) => document.getElementById(`c-${r}-${c}`)?.classList.add('win'));
 
-  let emoji, title, sub, coinsText = '';
-  if (!winner) {
-    emoji='рџ¤ќ'; title='Durang!'; sub='Taxtada joy qolmadi!';
-    if (!isSolo) finishRoom('connect4', roomCode, 'draw');
-  } else {
-    const iWon = (winner===1&&amIP1)||(winner===2&&!amIP1)||(isSolo&&winner===1);
-    const winName = winner===1 ? p1User.username : p2User.username;
-    if (iWon) {
-      emoji='рџЏ†'; title='G\'OLIBSIZ!'; sub=`Tabriklaymiz, ${winName}!`;
-      coinsText=`+рџЄ™ ${reward} tanga!`;
-      addCoins(reward); addResult(true);
-      document.getElementById('nav-coins').textContent = getCurrentUser()?.coins||0;
-      if (!isSolo) finishRoom('connect4', roomCode, winner===1 ? p1Key : p2Key);
-    } else if (isSolo&&winner===2) {
-      emoji='рџў'; title='Yutqazdingiz'; sub='CPU yutdi!'; addResult(false);
-    } else {
-      emoji='рџў'; title='Yutqazdingiz'; sub=`${winName} yutdi!`; addResult(false);
-      if (!isSolo) finishRoom('connect4', roomCode, winner===1 ? p1Key : p2Key);
+  // Disable column buttons
+  for (var c = 0; c < COLS; c++) {
+    var btn = document.getElementById('cb-' + c);
+    if (btn) btn.disabled = true;
+  }
+
+  // Highlight winning cells
+  if (winCells && winCells.length) {
+    for (var i = 0; i < winCells.length; i++) {
+      var el = document.getElementById('c-' + winCells[i][0] + '-' + winCells[i][1]);
+      if (el) el.classList.add('win');
     }
   }
-  setTimeout(()=>{
-    document.getElementById('res-emoji').textContent=emoji;
-    document.getElementById('res-title').textContent=title;
-    document.getElementById('res-sub').textContent=sub;
-    document.getElementById('res-coins').textContent=coinsText;
+
+  var icon, title, sub, coinsText = '';
+
+  if (!winner) {
+    // Draw
+    icon  = '&#9868;';
+    title = 'Durang!';
+    sub   = 'Taxtada joy qolmadi!';
+  } else {
+    var iWon = (winner === 1 && amIP1) || (winner === 2 && !amIP1) || (isSolo && winner === 1);
+    var winName = winner === 1 ? p1User.username : p2User.username;
+
+    if (iWon) {
+      icon      = '&#9733;';
+      title     = "G'OLIBSIZ!";
+      sub       = 'Tabriklaymiz, ' + winName + '!';
+      coinsText = '+&#9679; ' + reward + ' tanga!';
+      addCoins(reward);
+      addResult(true);
+      document.getElementById('nav-coins').textContent = getCurrentUser()?.coins || 0;
+    } else if (isSolo && winner === 2) {
+      icon  = '&#9711;';
+      title = 'Yutqazdingiz';
+      sub   = 'CPU yutdi!';
+      addResult(false);
+    } else {
+      icon  = '&#9711;';
+      title = 'Yutqazdingiz';
+      sub   = winName + ' yutdi!';
+      addResult(false);
+    }
+  }
+
+  setTimeout(function() {
+    document.getElementById('res-icon').innerHTML   = icon;
+    document.getElementById('res-title').textContent = title;
+    document.getElementById('res-sub').textContent   = sub;
+    document.getElementById('res-coins').innerHTML   = coinsText;
     document.getElementById('result-overlay').classList.add('show');
     refreshCoinDisplay();
   }, 800);
 }
 
-function goHome() { if(_roomUnsub)_roomUnsub(); window.location.href='dashboard.html'; }
+function goHome() {
+  if (_stateUnsub) _stateUnsub();
+  if (_cancelRoom) _cancelRoom();
+  window.location.href = 'dashboard.html';
+}
 </script>
 </body>
 </html>
-

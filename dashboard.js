@@ -55,6 +55,8 @@ async function renderLeaderboardAsync() {
     lb.innerHTML = '<div style="padding:18px;text-align:center;color:rgba(255,255,255,.3)">Hali oyinchilar yoq</div>';
     return;
   }
+  // Pulga (coins) qarab saralash
+  list.sort(function(a,b){ return (b.coins||0)-(a.coins||0); });
   lb.innerHTML = list.map(function(u,i) {
     var color = u.skinColor||u.skin_color||'#6366f1';
     var name  = u.username||'?';
@@ -63,7 +65,7 @@ async function renderLeaderboardAsync() {
       '<div class="lb-avatar" style="background:'+color+'">'+name.charAt(0).toUpperCase()+'</div>' +
       '<div class="lb-name">'+name+'</div>' +
       '<div class="lb-wins">W: '+(u.wins||0)+'</div>' +
-      '<div class="lb-coins">C: '+(u.coins||0)+'</div>' +
+      '<div class="lb-coins">&#9679; '+(u.coins||0)+'</div>' +
       '</div>';
   }).join('');
 }

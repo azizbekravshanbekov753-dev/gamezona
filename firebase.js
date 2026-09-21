@@ -340,7 +340,7 @@ async function getLeaderboard(limit) {
   var sb = getSB();
   if (sb) {
     var res = await sb.from('users').select('*')
-      .order('wins', { ascending: false }).limit(limit);
+      .order('coins', { ascending: false }).limit(limit);
     if (res.data && res.data.length) {
       return res.data.map(function(u) {
         return { username: u.username, wins: u.wins, coins: u.coins, skinColor: u.skin_color };
@@ -348,7 +348,7 @@ async function getLeaderboard(limit) {
     }
   }
   return Object.values(getUsers())
-    .sort(function(a,b){ return (b.wins||0)-(a.wins||0); }).slice(0,limit);
+    .sort(function(a,b){ return (b.coins||0)-(a.coins||0); }).slice(0,limit);
 }
 
 // ═══════════════════════════════════════

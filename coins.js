@@ -122,13 +122,15 @@ function handleSkin(skinId) {
     u.skin = skinId;
     u.skinColor = skin.color;
     saveUsers(users);
+    // Supabase ga saqlash
+    try { getSB()?.from('users').update({ skin_color: skin.color }).eq('id', key); } catch(e){}
     updateAvatarColor(skin.color);
     renderShop();
-    showToast(`✅ "${skin.name}" kiyildi!`);
+    showToast(skin.name + ' kiyildi!');
   } else {
     // Buy
     if ((u.coins||0) < skin.price) {
-      showToast('❌ Yetarli tanga yo\'q!', 'error');
+      showToast('Yetarli tanga yoq!', 'error');
       return;
     }
     u.coins -= skin.price;
@@ -136,10 +138,12 @@ function handleSkin(skinId) {
     u.skin = skinId;
     u.skinColor = skin.color;
     saveUsers(users);
+    // Supabase ga saqlash
+    try { getSB()?.from('users').update({ skin_color: skin.color, coins: u.coins }).eq('id', key); } catch(e){}
     updateAvatarColor(skin.color);
     renderShop();
     refreshCoinDisplay();
-    showToast(`🎉 "${skin.name}" sotib olindi va kiyildi!`);
+    showToast(skin.name + ' sotib olindi va kiyildi!');
   }
 }
 
