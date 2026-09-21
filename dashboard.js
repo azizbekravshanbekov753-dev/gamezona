@@ -20,6 +20,8 @@ document.addEventListener('DOMContentLoaded', function() {
   listenInvites(getCurrentKey(), onInviteReceived);
   startChatListener();
   setInterval(loadOnlinePlayers, 30000);
+  // Reyting real-time yangilash
+  startLeaderboardListener();
 });
 
 // ── PROFILE ──
@@ -55,7 +57,6 @@ async function renderLeaderboardAsync() {
     lb.innerHTML = '<div style="padding:18px;text-align:center;color:rgba(255,255,255,.3)">Hali oyinchilar yoq</div>';
     return;
   }
-  // Pulga (coins) qarab saralash
   list.sort(function(a,b){ return (b.coins||0)-(a.coins||0); });
   lb.innerHTML = list.map(function(u,i) {
     var color = u.skinColor||u.skin_color||'#6366f1';
@@ -68,6 +69,19 @@ async function renderLeaderboardAsync() {
       '<div class="lb-coins">&#9679; '+(u.coins||0)+'</div>' +
       '</div>';
   }).join('');
+}
+
+// Reyting real-time tinglash
+function startLeaderboardListener() {
+  var sb = getSB(); if (!sb) return;
+  sb.channel('lb-realtime-' + Date.now())
+    .on('postgres_changes', {
+      event: 'UPDATE', schema: 'public', table: 'users'
+    }, function() {
+      // Har qanday user yangilanganda reytingni qayta yukla
+      renderLeaderboardAsync();
+    })
+    .subscribe();
 }
 
 // ── ONLINE PLAYERS ──
