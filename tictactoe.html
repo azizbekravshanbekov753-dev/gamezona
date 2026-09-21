@@ -408,8 +408,8 @@ function endGame(result) {
 }
 
 function goHome() {
-  if (_stateUnsub) _stateUnsub();
-  if (_cancelRoom) _cancelRoom();
+  if (_stateUnsub) { _stateUnsub(); _stateUnsub = null; }
+  if (_cancelRoom) { _cancelRoom(); _cancelRoom = null; }
   window.location.href = 'dashboard.html';
 }
 </script>

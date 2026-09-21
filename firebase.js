@@ -13,7 +13,7 @@ function getSB() {
 }
 
 // ═══════════════════════════════════════
-//  USER
+//  USER — localStorage
 // ═══════════════════════════════════════
 function getUsers()   { return JSON.parse(localStorage.getItem('gz_users') || '{}'); }
 function saveUsers(u) { localStorage.setItem('gz_users', JSON.stringify(u)); }
@@ -40,10 +40,6 @@ async function syncUserFromSB(username) {
 
 // ═══════════════════════════════════════
 //  ROOM — enterRoom
-//  Muammo: host subscribe bo'lganda guest
-//  allaqachon kirgan bo'lishi mumkin.
-//  Yechim: subscribe callback da HAMISHA
-//  xonani qayta tekshiramiz.
 // ═══════════════════════════════════════
 async function enterRoom(gameType, code, myKey, onReady) {
   var sb = getSB();
@@ -62,7 +58,6 @@ async function enterRoom(gameType, code, myKey, onReady) {
     onReady(p1, p2);
   }
 
-  // Real-time listener — har qanday o'zgarishda ishlaydi
   ch = sb.channel('room-' + roomId + '-' + myKey)
     .on('postgres_changes', {
       event: '*', schema: 'public', table: 'rooms',
@@ -70,6 +65,17 @@ async function enterRoom(gameType, code, myKey, onReady) {
     }, function(payload) {
       var r = payload.new || payload.old;
       if (!r) return;
+      // Raqib chiqib ketdi
+      if (r.status === 'left') {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          if (ch) { try { sb.removeChannel(ch); } catch(e){} }
+          showToast('Raqibingiz o\'yindan chiqib ketdi!', 'error');
+          setTimeout(function(){ window.location.href = 'dashboard.html'; }, 2000);
+        }
+        return;
+      }
       if (r.status === 'playing' && r.player1 && r.player2) {
         done(r.player1, r.player2);
       }
@@ -77,58 +83,44 @@ async function enterRoom(gameType, code, myKey, onReady) {
     .subscribe(async function(status) {
       if (status !== 'SUBSCRIBED') return;
 
-      // Subscribe bo'lgach xonani tekshir
       var res  = await sb.from('rooms').select('*').eq('id', roomId).single();
       var room = res.data;
 
       if (room) {
-        // Xona bor
         if (room.status === 'playing' && room.player1 && room.player2) {
-          // Allaqachon to'la — ikkalasi ham o'yinga
           done(room.player1, room.player2);
           return;
         }
         if (room.status === 'waiting') {
-          if (room.player1 === myKey) {
-            // Biz host — kutamiz
-            return;
-          } else {
-            // Biz guest — kiramiz
-            var upd = await sb.from('rooms')
-              .update({ player2: myKey, status: 'playing' })
-              .eq('id', roomId)
-              .eq('status', 'waiting') // race condition uchun
-              .select()
-              .single();
-            if (upd.data) {
-              done(upd.data.player1, upd.data.player2);
-            }
-            return;
-          }
+          if (room.player1 === myKey) return; // host — kut
+          // Guest — kir
+          var upd = await sb.from('rooms')
+            .update({ player2: myKey, status: 'playing' })
+            .eq('id', roomId).eq('status', 'waiting')
+            .select().single();
+          if (upd.data) done(upd.data.player1, upd.data.player2);
+          return;
         }
       } else {
-        // Xona yo'q — biz host yaratamiz
+        // Host — xona yarat
         var ins = await sb.from('rooms').insert({
           id: roomId, game: gameType,
           player1: myKey, player2: null,
           status: 'waiting', state: {}
         });
         if (ins.error) {
-          // Ehtimol boshqa odam bir vaqtda yaratdi — guest sifatida kir
+          // Kimdir oldinroq yaratdi — guest sifatida kir
           var res2 = await sb.from('rooms').select('*').eq('id', roomId).single();
           if (res2.data && res2.data.status === 'waiting' && res2.data.player1 !== myKey) {
             var upd2 = await sb.from('rooms')
               .update({ player2: myKey, status: 'playing' })
-              .eq('id', roomId)
-              .select().single();
+              .eq('id', roomId).select().single();
             if (upd2.data) done(upd2.data.player1, upd2.data.player2);
           }
         }
-        // Host bo'ldik — listener kutadi
       }
     });
 
-  // 2 daqiqa timeout
   timer = setTimeout(async function() {
     if (!settled) {
       await sb.from('rooms').delete().eq('id', roomId).catch(function(){});
@@ -136,11 +128,17 @@ async function enterRoom(gameType, code, myKey, onReady) {
     }
   }, 120000);
 
+  // Cancel funksiyasi — raqibga xabar beradi
   return function() {
     settled = true;
     clearTimeout(timer);
     if (ch) { try { sb.removeChannel(ch); } catch(e){} }
-    sb.from('rooms').delete().eq('id', roomId).catch(function(){});
+    // Raqibga "chiqib ketdi" xabari
+    sb.from('rooms').update({ status: 'left' }).eq('id', roomId).catch(function(){});
+    // Xonani o'chir
+    setTimeout(function(){
+      sb.from('rooms').delete().eq('id', roomId).catch(function(){});
+    }, 3000);
   };
 }
 
@@ -152,8 +150,7 @@ function sendState(gameType, code, stateObj) {
   var data = Object.assign({}, stateObj, {
     _from: getCurrentKey(), _ts: Date.now()
   });
-  sb.from('rooms').update({ state: data })
-    .eq('id', gameType + '-' + code).then(function(){});
+  sb.from('rooms').update({ state: data }).eq('id', gameType + '-' + code).then(function(){});
 }
 
 function listenState(gameType, code, callback) {
@@ -164,7 +161,14 @@ function listenState(gameType, code, callback) {
       event: 'UPDATE', schema: 'public', table: 'rooms',
       filter: 'id=eq.' + gameType + '-' + code
     }, function(payload) {
-      var st = payload.new && payload.new.state;
+      var r  = payload.new;
+      // Raqib chiqdi
+      if (r && r.status === 'left') {
+        showToast('Raqibingiz o\'yindan chiqib ketdi!', 'error');
+        setTimeout(function(){ window.location.href = 'dashboard.html'; }, 2000);
+        return;
+      }
+      var st = r && r.state;
       if (st && st._from && st._from !== myKey) callback(st);
     })
     .subscribe();
@@ -186,7 +190,7 @@ async function findRandom(gameType, myKey, onMatch) {
 }
 
 // ═══════════════════════════════════════
-//  INVITE — rooms jadvalidan foydalanadi
+//  INVITE
 // ═══════════════════════════════════════
 function sendInvite(toKey, fromKey, gameType, code) {
   var sb = getSB(); if (!sb) return;
@@ -218,16 +222,13 @@ function listenInvites(myKey, callback) {
 }
 
 // ═══════════════════════════════════════
-//  CHAT — messages jadvali
+//  CHAT
 // ═══════════════════════════════════════
 async function sendChatMessage(toKey, fromKey, message, msgType, extra) {
   var sb = getSB(); if (!sb) return;
   await sb.from('messages').insert({
-    from_user: fromKey,
-    to_user:   toKey,
-    message:   message,
-    msg_type:  msgType || 'text',
-    extra:     extra   || {}
+    from_user: fromKey, to_user: toKey,
+    message: message, msg_type: msgType || 'text', extra: extra || {}
   });
 }
 
@@ -239,41 +240,25 @@ function listenChatMessages(myKey, callback) {
       filter: 'to_user=eq.' + myKey
     }, function(payload) {
       var r = payload.new;
-      if (r) {
-        callback({
-          from:    r.from_user,
-          to:      r.to_user,
-          msg:     r.message,
-          type:    r.msg_type || 'text',
-          extra:   r.extra   || {},
-          ts:      new Date(r.created_at).getTime()
-        });
-      }
+      if (r) callback({
+        from: r.from_user, to: r.to_user,
+        msg: r.message, type: r.msg_type || 'text',
+        extra: r.extra || {}, ts: new Date(r.created_at).getTime()
+      });
     })
     .subscribe();
   return function() { try { sb.removeChannel(ch); } catch(e){} };
 }
 
-// Eski chat tarixini yuklash
 async function loadChatHistory(myKey, partnerKey, limit) {
   var sb = getSB(); if (!sb) return [];
   limit = limit || 50;
-  var res = await sb.from('messages')
-    .select('*')
-    .or('and(from_user.eq.' + myKey + ',to_user.eq.' + partnerKey + '),' +
-        'and(from_user.eq.' + partnerKey + ',to_user.eq.' + myKey + ')')
-    .order('created_at', { ascending: true })
-    .limit(limit);
+  var res = await sb.from('messages').select('*')
+    .or('and(from_user.eq.' + myKey + ',to_user.eq.' + partnerKey + '),and(from_user.eq.' + partnerKey + ',to_user.eq.' + myKey + ')')
+    .order('created_at', { ascending: true }).limit(limit);
   if (!res.data) return [];
   return res.data.map(function(r) {
-    return {
-      from:  r.from_user,
-      to:    r.to_user,
-      msg:   r.message,
-      type:  r.msg_type || 'text',
-      extra: r.extra || {},
-      ts:    new Date(r.created_at).getTime()
-    };
+    return { from: r.from_user, to: r.to_user, msg: r.message, type: r.msg_type || 'text', extra: r.extra || {}, ts: new Date(r.created_at).getTime() };
   });
 }
 
@@ -295,11 +280,12 @@ async function goOnline() {
 
   setInterval(async function() {
     var fresh = getCurrentUser();
+    if (!fresh) return;
     await sb.from('presence').upsert({
       id: key,
-      username:   fresh ? fresh.username : u.username,
-      skin_color: fresh ? (fresh.skinColor||'#6366f1') : '#6366f1',
-      wins:       fresh ? (fresh.wins||0) : 0,
+      username:   fresh.username,
+      skin_color: fresh.skinColor || '#6366f1',
+      wins:       fresh.wins || 0,
       last_seen:  new Date().toISOString()
     });
   }, 30000);
@@ -333,33 +319,42 @@ function listenOnlinePlayers(callback) {
 }
 
 // ═══════════════════════════════════════
-//  LEADERBOARD
+//  LEADERBOARD — coins bo'yicha
 // ═══════════════════════════════════════
 async function getLeaderboard(limit) {
   limit = limit || 10;
   var sb = getSB();
   if (sb) {
-    var res = await sb.from('users').select('*')
+    var res = await sb.from('users').select('id, username, wins, coins, skin_color')
       .order('coins', { ascending: false }).limit(limit);
     if (res.data && res.data.length) {
       return res.data.map(function(u) {
-        return { username: u.username, wins: u.wins, coins: u.coins, skinColor: u.skin_color };
+        return {
+          username:  u.username,
+          wins:      u.wins   || 0,
+          coins:     u.coins  || 0,
+          skinColor: u.skin_color || '#6366f1'
+        };
       });
     }
   }
+  // Fallback: localStorage
   return Object.values(getUsers())
-    .sort(function(a,b){ return (b.coins||0)-(a.coins||0); }).slice(0,limit);
+    .sort(function(a,b){ return (b.coins||0)-(a.coins||0); })
+    .slice(0, limit);
 }
 
 // ═══════════════════════════════════════
-//  COINS & STATS
+//  COINS & STATS — Supabase ga ham saqlash
 // ═══════════════════════════════════════
 function addCoins(amount) {
   var key = getCurrentKey(); if (!key) return;
   var users = getUsers(); if (!users[key]) return;
   users[key].coins = (users[key].coins||0) + amount;
   saveUsers(users);
-  try { getSB()?.from('users').update({ coins: users[key].coins }).eq('id', key); } catch(e){}
+  // Supabase ga saqlash
+  var sb = getSB();
+  if (sb) sb.from('users').update({ coins: users[key].coins }).eq('id', key).then(function(){});
   refreshCoinDisplay();
 }
 
@@ -369,7 +364,11 @@ function addResult(win) {
   if (win) users[key].wins   = (users[key].wins  ||0)+1;
   else     users[key].losses = (users[key].losses||0)+1;
   saveUsers(users);
-  try { getSB()?.from('users').update({ wins: users[key].wins, losses: users[key].losses }).eq('id', key); } catch(e){}
+  // Supabase ga saqlash
+  var sb = getSB();
+  if (sb) sb.from('users').update({
+    wins: users[key].wins, losses: users[key].losses
+  }).eq('id', key).then(function(){});
 }
 
 function refreshCoinDisplay() {
@@ -397,7 +396,7 @@ function showToast(msg, type) {
   t.style.borderColor = type==='error' ? 'rgba(239,68,68,.6)' : 'rgba(99,102,241,.6)';
   t.style.opacity = '1'; t.style.display = 'block';
   clearTimeout(t._t);
-  t._t = setTimeout(function() {
+  t._t = setTimeout(function(){
     t.style.opacity='0'; setTimeout(function(){ t.style.display='none'; },300);
   }, 3500);
 }

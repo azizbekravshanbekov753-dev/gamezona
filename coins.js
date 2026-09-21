@@ -26,37 +26,44 @@ function getCurrentUser() {
 
 // Add coins to current user
 function addCoins(amount) {
-  const key = getCurrentKey();
+  var key = getCurrentKey();
   if (!key) return;
-  const users = getUsers();
+  var users = getUsers();
   if (!users[key]) return;
   users[key].coins = (users[key].coins || 0) + amount;
   saveUsers(users);
-  // Supabase ga ham saqlash
-  try {
-    const sb = getSB();
-    if (sb) sb.from('users').update({ coins: users[key].coins }).eq('id', key);
-  } catch(e) {}
+  // Supabase ga saqlash
+  var sb = getSB();
+  if (sb) {
+    sb.from('users')
+      .update({ coins: users[key].coins })
+      .eq('id', key)
+      .then(function(res){ 
+        if (res.error) console.warn('coins saqlashda xato:', res.error);
+      });
+  }
   refreshCoinDisplay();
 }
 
 // Add win/loss record
 function addResult(win) {
-  const key = getCurrentKey();
+  var key = getCurrentKey();
   if (!key) return;
-  const users = getUsers();
+  var users = getUsers();
   if (!users[key]) return;
-  if (win) { users[key].wins = (users[key].wins||0)+1; }
-  else      { users[key].losses = (users[key].losses||0)+1; }
+  if (win) users[key].wins   = (users[key].wins  ||0)+1;
+  else     users[key].losses = (users[key].losses||0)+1;
   saveUsers(users);
-  // Supabase ga ham saqlash
-  try {
-    const sb = getSB();
-    if (sb) sb.from('users').update({
-      wins: users[key].wins,
-      losses: users[key].losses
-    }).eq('id', key);
-  } catch(e) {}
+  // Supabase ga saqlash
+  var sb = getSB();
+  if (sb) {
+    sb.from('users')
+      .update({ wins: users[key].wins, losses: users[key].losses })
+      .eq('id', key)
+      .then(function(res){
+        if (res.error) console.warn('result saqlashda xato:', res.error);
+      });
+  }
 }
 
 // Refresh coin display in navbar
